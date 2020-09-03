@@ -1,5 +1,0 @@
-# NOTE: this is an example settings file, duplicate this file and rename it to settings.yml
-# you can define your project settings in that file locally.
-
-refresh: True
-upload: True

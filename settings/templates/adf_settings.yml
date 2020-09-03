@@ -1,0 +1,17 @@
+# data factory settings
+rg_name : ""
+rg_location: "westeurope"
+df_name : ""
+
+# blob settings
+ls_blob_name : "Python Blob Linked Service"
+ls_blob_account_name : ""
+ls_blob_account_key : ""
+
+# SQL settings
+ls_sql_name : "Python SQL Linked Service"
+ls_sql_server_name: ""
+ls_sql_database_name: ""
+ls_sql_database_user: ""
+ls_sql_database_password: ""
+
