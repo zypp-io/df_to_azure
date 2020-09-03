@@ -10,9 +10,7 @@ adf_settings = get_settings("settings/yml/adf_settings.yml")
 azure_settings = get_settings("settings/yml/azure_settings.yml")
 
 
-def upload_sample_dataset(tablename, file_path):
-
-    df = cat_modules(file_path, tablename)
+def upload_dataset(tablename, df):
 
     push_to_azure(df=df.head(n=0), tablename=tablename, schema_name=adf_settings["ls_sql_schema_name"])
     upload_to_blob(df, tablename)
