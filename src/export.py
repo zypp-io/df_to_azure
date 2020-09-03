@@ -9,14 +9,12 @@ adf_settings = get_settings("settings/yml/adf_settings.yml")
 azure_settings = get_settings("settings/yml/azure_settings.yml")
 
 
-def upload_sample_dataset():
-    filename = "sample.pkl"
+def upload_sample_dataset(tablename):
 
-    pickle_file = os.path.join(os.getcwd(), "data", "pickles", filename)
+    pickle_file = os.path.join(os.getcwd(), "data", "pickles", tablename + ".pkl")
     df = pd.read_pickle(pickle_file)
-    tablename = filename.split(".")[0]
 
-    push_to_azure(df=df.head(n=0), tablename=tablename, schema_name="test")
+    push_to_azure(df=df.head(n=0), tablename=tablename, schema_name=adf_settings["ls_sql_schema_name"])
     upload_to_blob(df, tablename)
     logging.info("Finished.number of transactions:{}".format(len(df)))
 
