@@ -11,7 +11,7 @@ import pandas as pd
 adf_settings = get_settings("settings/yml/adf_settings.yml")
 
 
-def run(tablename, df):
+def run(tablename, df, stagingdir):
 
     if adf_settings["create"]:
         # azure components
@@ -23,7 +23,7 @@ def run(tablename, df):
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
 
-    upload_dataset(tablename, df)
+    upload_dataset(tablename, df, stagingdir)
     adf.create_input_blob(tablename)
     adf.create_output_sql(tablename)
 
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     # datasets
     tablename = "sample"
     df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/azure_adf/data/sample/{tablename}.csv")
-
-    run(tablename, df)
+    stagingdir = os.path.join(os.getcwd(), "data", "staging")
+    run(tablename, df, stagingdir)

@@ -1,5 +1,5 @@
 import logging, os
-from src.parse_settings import get_settings
+from .parse_settings import get_settings
 import pandas as pd
 
 
