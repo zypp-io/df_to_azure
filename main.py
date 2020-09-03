@@ -9,6 +9,7 @@ import os
 # azure settings
 adf_settings = get_settings("settings/yml/adf_settings.yml")
 
+
 def run(file_path, tablename):
 
     if adf_settings["create"]:
@@ -27,6 +28,7 @@ def run(file_path, tablename):
 
     # pipelines
     adf.create_pipeline(tablename)
+
 
 if __name__ == "__main__":
     set_logging()
