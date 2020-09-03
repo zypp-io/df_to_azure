@@ -97,7 +97,7 @@ def create_linked_service_blob():
 
 
 def create_input_blob(tablename):
-    ds_name = f"BLOB_{tablename}"
+    ds_name = f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}"
 
     ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_blob_name"])
     ds_azure_blob = AzureBlobDataset(
@@ -119,7 +119,7 @@ def create_input_blob(tablename):
 
 def create_output_sql(tablename):
 
-    ds_name = f"SQL_{tablename}"
+    ds_name = f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}"
 
     ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_sql_name"])
     data_azureSql = AzureSqlTableDataset(
@@ -135,14 +135,14 @@ def create_pipeline(tablename):
     blob_source = BlobSource()
     sql_sink = SqlSink()
 
-    dsin_ref = DatasetReference(reference_name=f"BLOB_{tablename}")
-    dsOut_ref = DatasetReference(reference_name=f"SQL_{tablename}")
+    dsin_ref = DatasetReference(reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}")
+    dsOut_ref = DatasetReference(reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}")
     copy_activity = CopyActivity(
         name=act_name, inputs=[dsin_ref], outputs=[dsOut_ref], source=blob_source, sink=sql_sink
     )
 
     # Create a pipeline with the copy activity
-    p_name = f"{tablename} to SQL"
+    p_name = f"{adf_settings['ls_blob_container_name'].capitalize()} {tablename} to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()

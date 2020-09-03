@@ -39,7 +39,4 @@ if __name__ == "__main__":
     tablename = "sample"
     df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/azure_adf/data/sample/{tablename}.csv")
 
-    # file_path = '/Users/melvinfolkers/Documents/github/workgenda/staging/carriere'
-    # tablenames = os.listdir(file_path)
-    # tablenam = ''
     run(tablename, df)
