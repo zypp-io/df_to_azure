@@ -94,3 +94,56 @@ def create_linked_service_blob():
     ls = adf_client.linked_services.create_or_update(
         adf_settings["rg_name"], adf_settings["df_name"], adf_settings["ls_blob_name"], ls_azure_blob
     )
+
+
+def create_input_blob(tablename):
+    ds_name = f"BLOB_{tablename}"
+
+    ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_blob_name"])
+    ds_azure_blob = AzureBlobDataset(
+        linked_service_name=ds_ls,
+        folder_path=f"{adf_settings['ls_blob_container_name']}/{tablename}",
+        file_name=tablename,
+        format={
+            "type": "TextFormat",
+            "columnDelimiter": ",",
+            "rowDelimiter": "",
+            "treatEmptyAsNull": "true",
+            "skipLineCount": 0,
+            "firstRowAsHeader": "true",
+        },
+    )
+    adf_client = create_adf_client()
+    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, ds_azure_blob)
+
+
+def create_output_sql(tablename):
+
+    ds_name = f"SQL_{tablename}"
+
+    ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_sql_name"])
+    data_azureSql = AzureSqlTableDataset(
+        linked_service_name=ds_ls, table_name=f"{adf_settings['ls_sql_schema_name']}.{tablename}"
+    )
+    adf_client = create_adf_client()
+    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, data_azureSql)
+
+
+def create_pipeline(tablename):
+
+    act_name = f"Copy {tablename} to SQL"
+    blob_source = BlobSource()
+    sql_sink = SqlSink()
+
+    dsin_ref = DatasetReference(reference_name=f"BLOB_{tablename}")
+    dsOut_ref = DatasetReference(reference_name=f"SQL_{tablename}")
+    copy_activity = CopyActivity(
+        name=act_name, inputs=[dsin_ref], outputs=[dsOut_ref], source=blob_source, sink=sql_sink
+    )
+
+    # Create a pipeline with the copy activity
+    p_name = f"{tablename} to SQL"
+    params_for_pipeline = {}
+    p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
+    adf_client = create_adf_client()
+    p = adf_client.pipelines.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj)

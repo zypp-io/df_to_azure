@@ -1,3 +1,7 @@
+
+# general run settings
+create : True
+
 # data factory settings
 rg_name : ""
 rg_location: "westeurope"
