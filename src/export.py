@@ -4,15 +4,15 @@ import pandas as pd
 import os
 from src.parse_settings import get_settings
 import logging
+from src.functions import cat_modules
 
 adf_settings = get_settings("settings/yml/adf_settings.yml")
 azure_settings = get_settings("settings/yml/azure_settings.yml")
 
 
-def upload_sample_dataset(tablename):
+def upload_sample_dataset(tablename, file_path):
 
-    pickle_file = os.path.join(os.getcwd(), "data", "pickles", tablename + ".pkl")
-    df = pd.read_pickle(pickle_file)
+    df = cat_modules(file_path, tablename)
 
     push_to_azure(df=df.head(n=0), tablename=tablename, schema_name=adf_settings["ls_sql_schema_name"])
     upload_to_blob(df, tablename)
