@@ -1,6 +1,6 @@
 
 # general run settings
-create : True
+create : False
 
 # data factory settings
 rg_name : ""
@@ -19,3 +19,5 @@ ls_sql_database_name: ""
 ls_sql_database_user: ""
 ls_sql_database_password: ""
 
+# pipeline settings
+trigger : True
