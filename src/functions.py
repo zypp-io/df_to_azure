@@ -2,6 +2,7 @@ import logging, os
 from src.parse_settings import get_settings
 import pandas as pd
 
+
 def print_item(group):
     """Print an Azure object instance."""
     logging.info("\tName: {}".format(group.name))
@@ -47,6 +48,7 @@ def print_settings():
     for k, v in adf_settings.items():
         logging.info(k + " = " + v)
     logging.info(47 * "*" + "\n")
+
 
 def cat_modules(directory, tablename):
 

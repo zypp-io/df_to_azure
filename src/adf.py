@@ -147,3 +147,7 @@ def create_pipeline(tablename):
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()
     p = adf_client.pipelines.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj)
+
+    if adf_settings["trigger"]:
+        logging.info(f"triggering pipeline run for {tablename}!")
+        adf_client.pipelines.create_run(adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={})
