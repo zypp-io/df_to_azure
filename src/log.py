@@ -1,27 +1,23 @@
 import logging
-import os
+import os, sys
 from datetime import datetime
-
-logging.getLogger().setLevel(logging.INFO)
-
 
 def set_logging():
 
-    logfilename = "runlog_" + datetime.now().strftime("%Y%m%d") + ".log"
-    full_path = os.path.join(os.getcwd(), "log", logfilename)
+    logfilename = "runlog_" + datetime.now().strftime("%Y%m%d")
+    full_path = os.path.join(os.getcwd(), "log")
 
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
+    logFormatter = logging.Formatter(
+        "%(asctime)s [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
 
-    logging.basicConfig(
-        filename=full_path,
-        level=logging.INFO,
-        format="%(asctime)s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    fileHandler = logging.FileHandler(
+        "{0}/{1}.log".format(full_path, logfilename))
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
 
-    # define a Handler which writes INFO messages or higher to the sys.stderr
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    # add the handler to the root logger
-    logging.getLogger("").addHandler(console)
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    logging.getLogger().setLevel(logging.INFO)
