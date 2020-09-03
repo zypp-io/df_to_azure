@@ -2,15 +2,16 @@ from src.log import set_logging
 import logging
 from datetime import datetime
 from src import adf
-from src.export import upload_sample_dataset
+from src.export import upload_dataset
 from src.parse_settings import get_settings
 import os
+import pandas as pd
 
 # azure settings
 adf_settings = get_settings("settings/yml/adf_settings.yml")
 
 
-def run(file_path, tablename):
+def run(tablename, df):
 
     if adf_settings["create"]:
         # azure components
@@ -22,7 +23,7 @@ def run(file_path, tablename):
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
 
-    upload_sample_dataset(tablename, file_path)
+    upload_dataset(tablename, df)
     adf.create_input_blob(tablename)
     adf.create_output_sql(tablename)
 
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     logging.info(f"started script  at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # datasets
-    file_path = os.path.join(os.getcwd(), "data", "pickles")
     tablename = "sample"
-    run(file_path, tablename)
+    df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/azure_adf/data/sample/{tablename}.csv")
+
+    run(tablename, df)

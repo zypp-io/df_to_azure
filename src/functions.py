@@ -59,6 +59,7 @@ def cat_modules(directory, tablename):
             continue
 
         file_path = os.path.join(directory, file)
+        print(file_path)
         df = pd.read_pickle(file_path)
         all.append(df)
 
