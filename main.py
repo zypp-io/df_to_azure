@@ -1,14 +1,24 @@
 from src.log import set_logging
-from src.parse_settings import get_settings
 import logging
 from datetime import datetime
-
-settings = get_settings("settings/yml/run_settings.yml")
+from src import adf
+from src.functions import print_settings
+from src.export import upload_sample_dataset
 
 
 def run():
 
     logging.info("insert scripts here...")
+    print_settings()
+
+    adf.create_resourcegroup()
+    adf.create_datafactory()
+    adf.create_blob_container()
+
+    adf.create_linked_service_sql()
+    adf.create_linked_service_blob()
+
+    upload_sample_dataset()
 
 
 if __name__ == "__main__":
