@@ -1,19 +1,19 @@
-from src.adf import create_blob_service_client
+from .adf import create_blob_service_client
 from sqlalchemy import create_engine
 import pandas as pd
 import os
 from src.parse_settings import get_settings
 import logging
-from src.functions import cat_modules
+from .functions import cat_modules
 
 adf_settings = get_settings("settings/yml/adf_settings.yml")
 azure_settings = get_settings("settings/yml/azure_settings.yml")
 
 
-def upload_dataset(tablename, df):
+def upload_dataset(tablename, df, stagingdir):
 
     push_to_azure(df=df.head(n=0), tablename=tablename, schema_name=adf_settings["ls_sql_schema_name"])
-    upload_to_blob(df, tablename)
+    upload_to_blob(df, tablename, stagingdir)
     logging.info("Finished.number of transactions:{}".format(len(df)))
 
 
@@ -51,10 +51,10 @@ def auth_azure():
     return connectionstring
 
 
-def upload_to_blob(df, tablename):
+def upload_to_blob(df, tablename, stagingdir):
 
-    full_path_to_file = os.path.join(os.getcwd(), "data", "staging", tablename + ".csv")
-    df.to_csv(full_path_to_file, index=False)  # export file to staging
+    full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
+    df.to_csv(full_path_to_file, index=False, sep="^")  # export file to staging
 
     blob_service_client = create_blob_service_client()
 

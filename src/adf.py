@@ -1,7 +1,7 @@
 import logging
 from azure.mgmt.datafactory.models import *
-from src.functions import print_item
-from src.parse_settings import get_settings
+from .functions import print_item
+from .parse_settings import get_settings
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.resource import ResourceManagementClient
@@ -106,7 +106,7 @@ def create_input_blob(tablename):
         file_name=tablename,
         format={
             "type": "TextFormat",
-            "columnDelimiter": ",",
+            "columnDelimiter": "^",
             "rowDelimiter": "",
             "treatEmptyAsNull": "true",
             "skipLineCount": 0,
