@@ -1,6 +1,6 @@
-import logging
+import logging, os
 from src.parse_settings import get_settings
-
+import pandas as pd
 
 def print_item(group):
     """Print an Azure object instance."""
@@ -38,12 +38,30 @@ def print_settings():
     adf_settings = get_settings("settings/yml/adf_settings.yml")
     azure_settings = get_settings("settings/yml/azure_settings.yml")
 
-    print(10 * "*", "AZURE SETTINGS", 10 * "*")
+    logging.info(10 * "*" + "\nAZURE SETTINGS\n" + 10 * "*")
     for k, v in azure_settings.items():
-        print(k, "=", v)
-    print(34 * "*", "\n")
+        logging.info(k + " = " + v)
+    logging.info(34 * "*" + "\n")
 
-    print(10 * "*", "AZURE DATA FACTORY SETTINGS", 10 * "*")
+    logging.info(10 * "*" + "\nAZURE DATA FACTORY SETTINGS\n" + 10 * "*")
     for k, v in adf_settings.items():
-        print(k, "=", v)
-    print(47 * "*", "\n")
+        logging.info(k + " = " + v)
+    logging.info(47 * "*" + "\n")
+
+def cat_modules(directory, tablename):
+
+    all = list()
+    for file in os.listdir(directory):
+
+        if file.find(tablename) == -1:
+            continue
+
+        file_path = os.path.join(directory, file)
+        df = pd.read_pickle(file_path)
+        all.append(df)
+
+    data = pd.concat(all, axis=0, sort=False)
+
+    logging.info(f"imported {len(all)} file(s) for table '{tablename}'")
+
+    return data
