@@ -15,4 +15,5 @@ if __name__ == "__main__":
     df = pd.read_csv(
         f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv"
     )
-    run(tablename, df)
+    schema = 'tst'
+    run(df, tablename, schema)
