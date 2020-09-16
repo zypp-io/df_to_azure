@@ -2,18 +2,39 @@ from .adf import create_blob_service_client
 from sqlalchemy import create_engine
 import pandas as pd
 import os
-from src.parse_settings import get_settings
 import logging
-from .functions import cat_modules
+from .functions import cat_modules, create_dir
+from . import adf
+from .parse_settings import adf_settings
 
-adf_settings = get_settings("settings/yml/adf_settings.yml")
-azure_settings = get_settings("settings/yml/azure_settings.yml")
+
+def run(tablename, df):
+    if adf_settings["create"]:
+        # azure components
+        adf.create_resourcegroup()
+        adf.create_datafactory()
+        adf.create_blob_container()
+
+        # linked services
+        adf.create_linked_service_sql()
+        adf.create_linked_service_blob()
+
+    upload_dataset(tablename, df)
+    adf.create_input_blob(tablename)
+    adf.create_output_sql(tablename)
+
+    # pipelines
+    adf.create_pipeline(tablename)
 
 
-def upload_dataset(tablename, df, stagingdir):
+def upload_dataset(tablename, df):
 
-    push_to_azure(df=df.head(n=0), tablename=tablename, schema_name=adf_settings["ls_sql_schema_name"])
-    upload_to_blob(df, tablename, stagingdir)
+    push_to_azure(
+        df=df.head(n=0),
+        tablename=tablename,
+        schema_name=adf_settings["ls_sql_schema_name"],
+    )
+    upload_to_blob(df, tablename)
     logging.info("Finished.number of transactions:{}".format(len(df)))
 
 
@@ -51,7 +72,10 @@ def auth_azure():
     return connectionstring
 
 
-def upload_to_blob(df, tablename, stagingdir):
+def upload_to_blob(df, tablename):
+
+    current_dir = os.path.dirname(__file__)
+    stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
 
     full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
     df.to_csv(full_path_to_file, index=False, sep="^")  # export file to staging
@@ -59,7 +83,8 @@ def upload_to_blob(df, tablename, stagingdir):
     blob_service_client = create_blob_service_client()
 
     blob_client = blob_service_client.get_blob_client(
-        container=adf_settings["ls_blob_container_name"], blob=f"{tablename}/{tablename}"
+        container=adf_settings["ls_blob_container_name"],
+        blob=f"{tablename}/{tablename}",
     )
 
     logging.info(f"start uploading blob {tablename}...")
