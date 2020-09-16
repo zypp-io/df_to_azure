@@ -1,34 +1,38 @@
 import logging
 from azure.mgmt.datafactory.models import *
 from .functions import print_item
-from .parse_settings import get_settings
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
-
+from .parse_settings import adf_settings, azure_settings
 
 logging.getLogger(__name__).setLevel(logging.INFO)
-
-adf_settings = get_settings("settings/yml/adf_settings.yml")
-azure_settings = get_settings("settings/yml/azure_settings.yml")
 
 
 def create_adf_client():
     credentials = ServicePrincipalCredentials(
-        client_id=azure_settings["client_id"], secret=azure_settings["secret"], tenant=azure_settings["tenant"]
+        client_id=azure_settings["client_id"],
+        secret=azure_settings["secret"],
+        tenant=azure_settings["tenant"],
     )
 
-    adf_client = DataFactoryManagementClient(credentials, azure_settings["subscription_id"])
+    adf_client = DataFactoryManagementClient(
+        credentials, azure_settings["subscription_id"]
+    )
 
     return adf_client
 
 
 def create_resource_client():
     credentials = ServicePrincipalCredentials(
-        client_id=azure_settings["client_id"], secret=azure_settings["secret"], tenant=azure_settings["tenant"]
+        client_id=azure_settings["client_id"],
+        secret=azure_settings["secret"],
+        tenant=azure_settings["tenant"],
     )
-    resource_client = ResourceManagementClient(credentials, azure_settings["subscription_id"])
+    resource_client = ResourceManagementClient(
+        credentials, azure_settings["subscription_id"]
+    )
 
     return resource_client
 
@@ -37,7 +41,9 @@ def create_resourcegroup():
 
     resource_client = create_resource_client()
     rg_params = {"location": adf_settings["rg_location"]}
-    rg = resource_client.resource_groups.create_or_update(adf_settings["rg_name"], rg_params)
+    rg = resource_client.resource_groups.create_or_update(
+        adf_settings["rg_name"], rg_params
+    )
     print_item(rg)
 
 
@@ -45,7 +51,9 @@ def create_datafactory():
 
     df_resource = Factory(location=adf_settings["rg_location"])
     adf_client = create_adf_client()
-    df = adf_client.factories.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], df_resource)
+    df = adf_client.factories.create_or_update(
+        adf_settings["rg_name"], adf_settings["df_name"], df_resource
+    )
     print_item(df)
 
     while df.provisioning_state != "Succeeded":
@@ -80,7 +88,10 @@ def create_linked_service_sql():
     adf_client = create_adf_client()
 
     adf_client.linked_services.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], adf_settings["ls_sql_name"], ls_azure_sql
+        adf_settings["rg_name"],
+        adf_settings["df_name"],
+        adf_settings["ls_sql_name"],
+        ls_azure_sql,
     )
 
 
@@ -92,7 +103,10 @@ def create_linked_service_blob():
     ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
     adf_client = create_adf_client()
     ls = adf_client.linked_services.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], adf_settings["ls_blob_name"], ls_azure_blob
+        adf_settings["rg_name"],
+        adf_settings["df_name"],
+        adf_settings["ls_blob_name"],
+        ls_azure_blob,
     )
 
 
@@ -114,7 +128,9 @@ def create_input_blob(tablename):
         },
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, ds_azure_blob)
+    ds = adf_client.datasets.create_or_update(
+        adf_settings["rg_name"], adf_settings["df_name"], ds_name, ds_azure_blob
+    )
 
 
 def create_output_sql(tablename):
@@ -123,10 +139,13 @@ def create_output_sql(tablename):
 
     ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_sql_name"])
     data_azureSql = AzureSqlTableDataset(
-        linked_service_name=ds_ls, table_name=f"{adf_settings['ls_sql_schema_name']}.{tablename}"
+        linked_service_name=ds_ls,
+        table_name=f"{adf_settings['ls_sql_schema_name']}.{tablename}",
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, data_azureSql)
+    ds = adf_client.datasets.create_or_update(
+        adf_settings["rg_name"], adf_settings["df_name"], ds_name, data_azureSql
+    )
 
 
 def create_pipeline(tablename):
@@ -135,10 +154,18 @@ def create_pipeline(tablename):
     blob_source = BlobSource()
     sql_sink = SqlSink()
 
-    dsin_ref = DatasetReference(reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}")
-    dsOut_ref = DatasetReference(reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}")
+    dsin_ref = DatasetReference(
+        reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}"
+    )
+    dsOut_ref = DatasetReference(
+        reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}"
+    )
     copy_activity = CopyActivity(
-        name=act_name, inputs=[dsin_ref], outputs=[dsOut_ref], source=blob_source, sink=sql_sink
+        name=act_name,
+        inputs=[dsin_ref],
+        outputs=[dsOut_ref],
+        source=blob_source,
+        sink=sql_sink,
     )
 
     # Create a pipeline with the copy activity
@@ -146,8 +173,12 @@ def create_pipeline(tablename):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    p = adf_client.pipelines.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj)
+    p = adf_client.pipelines.create_or_update(
+        adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj
+    )
 
     if adf_settings["trigger"]:
         logging.info(f"triggering pipeline run for {tablename}!")
-        adf_client.pipelines.create_run(adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={})
+        adf_client.pipelines.create_run(
+            adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={}
+        )

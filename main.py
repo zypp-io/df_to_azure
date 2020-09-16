@@ -1,34 +1,9 @@
-from src.log import set_logging
 import logging
-from datetime import datetime
-from src import adf
-from src.export import upload_dataset
-from src.parse_settings import get_settings
-import os
 import pandas as pd
-
-# azure settings
-adf_settings = get_settings("settings/yml/adf_settings.yml")
-
-
-def run(tablename, df, stagingdir):
-
-    if adf_settings["create"]:
-        # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-        adf.create_blob_container()
-
-        # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
-
-    upload_dataset(tablename, df, stagingdir)
-    adf.create_input_blob(tablename)
-    adf.create_output_sql(tablename)
-
-    # pipelines
-    adf.create_pipeline(tablename)
+from src.export import run
+from src.log import set_logging
+from datetime import datetime
+import os
 
 
 if __name__ == "__main__":
@@ -37,6 +12,7 @@ if __name__ == "__main__":
 
     # datasets
     tablename = "sample"
-    df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/azure_adf/data/sample/{tablename}.csv")
-    stagingdir = os.path.join(os.getcwd(), "data", "staging")
-    run(tablename, df, stagingdir)
+    df = pd.read_csv(
+        f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv"
+    )
+    run(tablename, df)

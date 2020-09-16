@@ -28,8 +28,12 @@ def print_activity_run_details(activity_run):
     logging.info("\n\tActivity run details\n")
     logging.info("\tActivity run status: {}".format(activity_run.status))
     if activity_run.status == "Succeeded":
-        logging.info("\tNumber of bytes read: {}".format(activity_run.output["dataRead"]))
-        logging.info("\tNumber of bytes written: {}".format(activity_run.output["dataWritten"]))
+        logging.info(
+            "\tNumber of bytes read: {}".format(activity_run.output["dataRead"])
+        )
+        logging.info(
+            "\tNumber of bytes written: {}".format(activity_run.output["dataWritten"])
+        )
         logging.info("\tCopy duration: {}".format(activity_run.output["copyDuration"]))
     else:
         logging.info("\tErrors: {}".format(activity_run.error["message"]))
@@ -68,3 +72,12 @@ def cat_modules(directory, tablename):
     logging.info(f"imported {len(all)} file(s) for table '{tablename}'")
 
     return data
+
+
+def create_dir(destination):
+    try:
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+    except OSError:
+        logging.warning("Error Creating directory. " + destination)
+    return destination
