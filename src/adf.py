@@ -133,14 +133,14 @@ def create_input_blob(tablename):
     )
 
 
-def create_output_sql(tablename):
+def create_output_sql(tablename, schema):
 
     ds_name = f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}"
 
     ds_ls = LinkedServiceReference(reference_name=adf_settings["ls_sql_name"])
     data_azureSql = AzureSqlTableDataset(
         linked_service_name=ds_ls,
-        table_name=f"{adf_settings['ls_sql_schema_name']}.{tablename}",
+        table_name=f"{schema}.{tablename}",
     )
     adf_client = create_adf_client()
     ds = adf_client.datasets.create_or_update(
@@ -182,3 +182,5 @@ def create_pipeline(tablename):
         adf_client.pipelines.create_run(
             adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={}
         )
+
+

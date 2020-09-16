@@ -8,8 +8,10 @@ from . import adf
 from .parse_settings import adf_settings
 
 
-def run(tablename, df):
+def run(df, tablename, schema):
     if adf_settings["create"]:
+        create_schema(schema)
+
         # azure components
         adf.create_resourcegroup()
         adf.create_datafactory()
@@ -19,20 +21,20 @@ def run(tablename, df):
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
 
-    upload_dataset(tablename, df)
+    upload_dataset(tablename, df, schema)
     adf.create_input_blob(tablename)
-    adf.create_output_sql(tablename)
+    adf.create_output_sql(tablename, schema)
 
     # pipelines
     adf.create_pipeline(tablename)
 
 
-def upload_dataset(tablename, df):
+def upload_dataset(tablename, df, schema):
 
     push_to_azure(
         df=df.head(n=0),
         tablename=tablename,
-        schema_name=adf_settings["ls_sql_schema_name"],
+        schema_name=schema,
     )
     upload_to_blob(df, tablename)
     logging.info("Finished.number of transactions:{}".format(len(df)))
@@ -91,3 +93,24 @@ def upload_to_blob(df, tablename):
     with open(full_path_to_file, "rb") as data:
         blob_client.upload_blob(data, overwrite=True)
     logging.info(f"finished uploading blob {tablename}!")
+
+def create_schema(schema):
+    try:
+        execute_stmt(stmt = f"create schema {schema}")
+        logging.info(f'succesfully created schema {schema}')
+    except:
+        logging.info(f'did not create schema {schema}')
+
+def execute_stmt(stmt):
+    """
+    :param stmt: SQL statement to be executed
+    :return: executes the statment
+    """
+    conn = auth_azure()
+    engn = create_engine(conn)
+
+    with engn.connect() as con:
+        rs = con.execute(stmt)
+
+    return rs
+
