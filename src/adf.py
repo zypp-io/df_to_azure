@@ -17,9 +17,7 @@ def create_adf_client():
         tenant=azure_settings["tenant"],
     )
 
-    adf_client = DataFactoryManagementClient(
-        credentials, azure_settings["subscription_id"]
-    )
+    adf_client = DataFactoryManagementClient(credentials, azure_settings["subscription_id"])
 
     return adf_client
 
@@ -30,9 +28,7 @@ def create_resource_client():
         secret=azure_settings["secret"],
         tenant=azure_settings["tenant"],
     )
-    resource_client = ResourceManagementClient(
-        credentials, azure_settings["subscription_id"]
-    )
+    resource_client = ResourceManagementClient(credentials, azure_settings["subscription_id"])
 
     return resource_client
 
@@ -41,9 +37,7 @@ def create_resourcegroup():
 
     resource_client = create_resource_client()
     rg_params = {"location": adf_settings["rg_location"]}
-    rg = resource_client.resource_groups.create_or_update(
-        adf_settings["rg_name"], rg_params
-    )
+    rg = resource_client.resource_groups.create_or_update(adf_settings["rg_name"], rg_params)
     print_item(rg)
 
 
@@ -51,9 +45,7 @@ def create_datafactory():
 
     df_resource = Factory(location=adf_settings["rg_location"])
     adf_client = create_adf_client()
-    df = adf_client.factories.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], df_resource
-    )
+    df = adf_client.factories.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], df_resource)
     print_item(df)
 
     while df.provisioning_state != "Succeeded":
@@ -128,9 +120,7 @@ def create_input_blob(tablename):
         },
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], ds_name, ds_azure_blob
-    )
+    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, ds_azure_blob)
 
 
 def create_output_sql(tablename, schema):
@@ -143,9 +133,7 @@ def create_output_sql(tablename, schema):
         table_name=f"{schema}.{tablename}",
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], ds_name, data_azureSql
-    )
+    ds = adf_client.datasets.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], ds_name, data_azureSql)
 
 
 def create_pipeline(tablename):
@@ -154,12 +142,8 @@ def create_pipeline(tablename):
     blob_source = BlobSource()
     sql_sink = SqlSink()
 
-    dsin_ref = DatasetReference(
-        reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}"
-    )
-    dsOut_ref = DatasetReference(
-        reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}"
-    )
+    dsin_ref = DatasetReference(reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}")
+    dsOut_ref = DatasetReference(reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}")
     copy_activity = CopyActivity(
         name=act_name,
         inputs=[dsin_ref],
@@ -173,12 +157,8 @@ def create_pipeline(tablename):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    p = adf_client.pipelines.create_or_update(
-        adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj
-    )
+    p = adf_client.pipelines.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj)
 
     if adf_settings["trigger"]:
         logging.info(f"triggering pipeline run for {tablename}!")
-        adf_client.pipelines.create_run(
-            adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={}
-        )
+        adf_client.pipelines.create_run(adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={})
