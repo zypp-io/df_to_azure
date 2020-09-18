@@ -15,6 +15,6 @@ if __name__ == "__main__":
     df = pd.read_csv(
         f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv"
     )
-    schema = 'tst'
+    schema = "tst"
 
-    run(df, tablename, schema, incremental = True, id_field = 'col_a')
+    run(df, tablename, schema, incremental=True, id_field="col_a")

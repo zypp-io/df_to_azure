@@ -8,7 +8,7 @@ from . import adf
 from .parse_settings import adf_settings
 
 
-def run(df, tablename, schema, incremental = False, id_field = None):
+def run(df, tablename, schema, incremental=False, id_field=None):
     if adf_settings["create"]:
         create_schema(schema)
 
@@ -31,8 +31,8 @@ def run(df, tablename, schema, incremental = False, id_field = None):
 
 def upload_dataset(tablename, df, schema, incremental, id_field):
 
-    if len(df) ==0 :
-        return logging.info('no new records to upload.')
+    if len(df) == 0:
+        return logging.info("no new records to upload.")
 
     if incremental == False:
         push_to_azure(
@@ -101,12 +101,14 @@ def upload_to_blob(df, tablename):
         blob_client.upload_blob(data, overwrite=True)
     logging.info(f"finished uploading blob {tablename}!")
 
+
 def create_schema(schema):
     try:
-        execute_stmt(stmt = f"create schema {schema}")
-        logging.info(f'succesfully created schema {schema}')
+        execute_stmt(stmt=f"create schema {schema}")
+        logging.info(f"succesfully created schema {schema}")
     except:
-        logging.info(f'did not create schema {schema}')
+        logging.info(f"did not create schema {schema}")
+
 
 def execute_stmt(stmt):
     """
@@ -121,7 +123,8 @@ def execute_stmt(stmt):
 
     return rs
 
-def delete_current_records(df, tablename, schema ,id_field):
+
+def delete_current_records(df, tablename, schema, id_field):
     """
     :param df: new records
     :param name: name of the table
@@ -136,6 +139,7 @@ def delete_current_records(df, tablename, schema ,id_field):
     else:
         logging.info("skip deleting. no records in delete statement")
 
+
 def get_overlapping_records(df, tablename, schema, id_field):
     """
     :param df: the dataframe containing new records
@@ -145,12 +149,12 @@ def get_overlapping_records(df, tablename, schema, id_field):
     conn = auth_azure()
     engn = create_engine(conn)
 
-    current_db = pd.read_sql_table(tablename, engn,
-                            schema= schema)
+    current_db = pd.read_sql_table(tablename, engn, schema=schema)
     overlapping_records = current_db[current_db[id_field].isin(df[id_field])]
     del_list = overlapping_records.astype(str)[id_field].to_list()
 
     return del_list
+
 
 def create_sql_delete_stmt(del_list, tablename, schema, id_field):
     """
@@ -159,7 +163,7 @@ def create_sql_delete_stmt(del_list, tablename, schema, id_field):
     :return: SQL statement for deleting the specific records
     """
 
-    del_list = [ "'" + x + "'" for x in del_list]
+    del_list = ["'" + x + "'" for x in del_list]
 
     sql_list = ", ".join(del_list)
     sql_stmt = f"DELETE FROM {schema}.{tablename} WHERE {id_field} IN ({sql_list})"
