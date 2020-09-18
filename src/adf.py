@@ -182,5 +182,3 @@ def create_pipeline(tablename):
         adf_client.pipelines.create_run(
             adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={}
         )
-
-
