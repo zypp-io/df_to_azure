@@ -87,7 +87,7 @@ def upload_to_blob(df, tablename):
     stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
 
     full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
-    df.to_csv(full_path_to_file, index=False, sep="^")  # export file to staging
+    df.to_csv(full_path_to_file, index=False, sep="^", line_terminator = '\n')  # export file to staging
 
     blob_service_client = create_blob_service_client()
 
