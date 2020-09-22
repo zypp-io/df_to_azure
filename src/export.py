@@ -8,6 +8,27 @@ from . import adf
 from .parse_settings import adf_settings
 
 
+def run_multiple(df_dict, schema, incremental=False, id_field=None):
+    if adf_settings["create"]:
+        create_schema(schema)
+
+        # azure components
+        adf.create_resourcegroup()
+        adf.create_datafactory()
+        adf.create_blob_container()
+
+        # linked services
+        adf.create_linked_service_sql()
+        adf.create_linked_service_blob()
+
+    for tablename, df in df_dict.items():
+        upload_dataset(tablename, df, schema, incremental, id_field)
+        adf.create_input_blob(tablename)
+        adf.create_output_sql(tablename, schema)
+
+    # pipelines
+    adf.create_multiple_activity_pipeline(df_dict)
+
 def run(df, tablename, schema, incremental=False, id_field=None):
     if adf_settings["create"]:
         create_schema(schema)
