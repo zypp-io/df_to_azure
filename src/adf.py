@@ -138,19 +138,7 @@ def create_output_sql(tablename, schema):
 
 def create_pipeline(tablename):
 
-    act_name = f"Copy {tablename} to SQL"
-    blob_source = BlobSource()
-    sql_sink = SqlSink()
-
-    dsin_ref = DatasetReference(reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}")
-    dsOut_ref = DatasetReference(reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}")
-    copy_activity = CopyActivity(
-        name=act_name,
-        inputs=[dsin_ref],
-        outputs=[dsOut_ref],
-        source=blob_source,
-        sink=sql_sink,
-    )
+    copy_activity = create_copy_activity(tablename)
 
     # Create a pipeline with the copy activity
     p_name = f"{adf_settings['ls_blob_container_name'].capitalize()} {tablename} to SQL"
@@ -161,4 +149,43 @@ def create_pipeline(tablename):
 
     if adf_settings["trigger"]:
         logging.info(f"triggering pipeline run for {tablename}!")
+        adf_client.pipelines.create_run(adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={})
+
+
+
+def create_copy_activity(tablename):
+    act_name = f"Copy {tablename} to SQL"
+    blob_source = BlobSource()
+    sql_sink = SqlSink()
+
+    dsin_ref = DatasetReference(
+        reference_name=f"BLOB_{adf_settings['ls_blob_container_name']}_{tablename}")
+    dsOut_ref = DatasetReference(
+        reference_name=f"SQL_{adf_settings['ls_blob_container_name']}_{tablename}")
+    copy_activity = CopyActivity(
+        name=act_name,
+        inputs=[dsin_ref],
+        outputs=[dsOut_ref],
+        source=blob_source,
+        sink=sql_sink,
+    )
+
+    return copy_activity
+
+
+def create_multiple_activity_pipeline(df_dict):
+
+    copy_activities = list()
+    for tablename, df in df_dict.items():
+        copy_activities.append(create_copy_activity(tablename))
+
+    # Create a pipeline with the copy activity
+    p_name = f"{adf_settings['ls_blob_container_name'].capitalize()} to SQL"
+    params_for_pipeline = {}
+    p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
+    adf_client = create_adf_client()
+    p = adf_client.pipelines.create_or_update(adf_settings["rg_name"], adf_settings["df_name"], p_name, p_obj)
+
+    if adf_settings["trigger"]:
+        logging.info(f"triggering pipeline run for {adf_settings['ls_blob_container_name'].capitalize()}!")
         adf_client.pipelines.create_run(adf_settings["rg_name"], adf_settings["df_name"], p_name, parameters={})
