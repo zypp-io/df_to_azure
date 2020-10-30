@@ -1,4 +1,4 @@
-name: Method Usage
+name: DF to Azure
 
 on: [push]
 
