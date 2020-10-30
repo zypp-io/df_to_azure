@@ -1,15 +1,41 @@
-from .adf import create_blob_service_client
 from sqlalchemy import create_engine
 import pandas as pd
 import os
 import logging
-from .functions import cat_modules, create_dir
-from . import adf
-from .parse_settings import adf_settings
+from df_to_azure.exceptions import CreateSchemaError
+from df_to_azure.functions import create_dir
+from df_to_azure.adf import create_blob_service_client
+import df_to_azure.adf as adf
+from df_to_azure.parse_settings import get_settings
+
+
+settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
+
+
+def run_multiple(df_dict, schema, incremental=False, id_field=None):
+    if settings["create"]:
+        create_schema(schema)
+
+        # azure components
+        adf.create_resourcegroup()
+        adf.create_datafactory()
+        adf.create_blob_container()
+
+        # linked services
+        adf.create_linked_service_sql()
+        adf.create_linked_service_blob()
+
+    for table_name, df in df_dict.items():
+        upload_dataset(table_name, df, schema, incremental, id_field)
+        adf.create_input_blob(table_name)
+        adf.create_output_sql(table_name, schema)
+
+    # pipelines
+    adf.create_multiple_activity_pipeline(df_dict)
 
 
 def run(df, tablename, schema, incremental=False, id_field=None):
-    if adf_settings["create"]:
+    if settings["create"]:
         create_schema(schema)
 
         # azure components
@@ -34,13 +60,13 @@ def upload_dataset(tablename, df, schema, incremental, id_field):
     if len(df) == 0:
         return logging.info("no new records to upload.")
 
-    if incremental == False:
+    if not incremental:
         push_to_azure(
             df=df.head(n=0),
             tablename=tablename,
             schema_name=schema,
         )
-    elif incremental == True:
+    elif incremental:
         delete_current_records(df, tablename, schema, id_field)
 
     upload_to_blob(df, tablename)
@@ -48,22 +74,22 @@ def upload_dataset(tablename, df, schema, incremental, id_field):
 
 
 def push_to_azure(df, tablename, schema_name):
-    connectionstring = auth_azure()
-    engn = create_engine(connectionstring, pool_size=10, max_overflow=20)
+    connection_string = auth_azure()
+    engine = create_engine(connection_string, pool_size=10, max_overflow=20)
     df.to_sql(
         tablename,
-        engn,
+        engine,
         chunksize=100000,
         if_exists="replace",
         index=False,
         schema=schema_name,
     )
-    numberofcolumns = str(len(df.columns))
+    number_of_columns = str(len(df.columns))
 
     result = (
         "push successful ({}):".format(tablename),
         len(df),
-        "records pushed to Microsoft Azure ({} columns)".format(numberofcolumns),
+        "records pushed to Microsoft Azure ({} columns)".format(number_of_columns),
     )
     logging.info(result)
 
@@ -71,10 +97,10 @@ def push_to_azure(df, tablename, schema_name):
 def auth_azure():
 
     connectionstring = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-        adf_settings["ls_sql_database_user"],
-        adf_settings["ls_sql_database_password"],
-        adf_settings["ls_sql_server_name"],
-        adf_settings["ls_sql_database_name"],
+        settings["ls_sql_database_user"],
+        settings["ls_sql_database_password"],
+        settings["ls_sql_server_name"],
+        settings["ls_sql_database_name"],
         "ODBC Driver 17 for SQL Server",
     )
 
@@ -87,12 +113,14 @@ def upload_to_blob(df, tablename):
     stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
 
     full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
-    df.to_csv(full_path_to_file, index=False, sep="^")  # export file to staging
+    df.to_csv(
+        full_path_to_file, index=False, sep="^", line_terminator="\n"
+    )  # export file to staging
 
     blob_service_client = create_blob_service_client()
 
     blob_client = blob_service_client.get_blob_client(
-        container=adf_settings["ls_blob_container_name"],
+        container=settings["ls_blob_container_name"],
         blob=f"{tablename}/{tablename}",
     )
 
@@ -106,8 +134,8 @@ def create_schema(schema):
     try:
         execute_stmt(stmt=f"create schema {schema}")
         logging.info(f"succesfully created schema {schema}")
-    except:
-        logging.info(f"did not create schema {schema}")
+    except CreateSchemaError:
+        logging.info(f"CreateSchemaError: did not create schema {schema}")
 
 
 def execute_stmt(stmt):
@@ -126,8 +154,10 @@ def execute_stmt(stmt):
 
 def delete_current_records(df, tablename, schema, id_field):
     """
-    :param df: new records
-    :param name: name of the table
+    :param df: the dataframe containing new records
+    :param tablename: the name of the table
+    :param schema: schema in the database
+    :param id_field: field to check if the values are already in the database
     :return: executes a delete statement in Azure SQL for the new records.
     """
 
@@ -143,7 +173,9 @@ def delete_current_records(df, tablename, schema, id_field):
 def get_overlapping_records(df, tablename, schema, id_field):
     """
     :param df: the dataframe containing new records
-    :param name: the name of the table
+    :param tablename: the name of the table
+    :param schema: schema in the database
+    :param id_field: field to check if the values are already in the database
     :return:  a list of records that are overlapping
     """
     conn = auth_azure()
@@ -153,13 +185,18 @@ def get_overlapping_records(df, tablename, schema, id_field):
     overlapping_records = current_db[current_db[id_field].isin(df[id_field])]
     del_list = overlapping_records.astype(str)[id_field].to_list()
 
+    new_records = df[~df[id_field].isin(current_db[id_field])]
+    logging.info(f"{len(overlapping_records)} updated records and {len(new_records)} new records")
+
     return del_list
 
 
 def create_sql_delete_stmt(del_list, tablename, schema, id_field):
     """
     :param del_list: list of records that need to be formatted in SQL delete statement.
-    :param name: the name of the table
+    :param tablename: the name of the table
+    :param schema: schema in the database
+    :param id_field: field to check if the values are already in the database
     :return: SQL statement for deleting the specific records
     """
 

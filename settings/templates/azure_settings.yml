@@ -1,5 +1,0 @@
-# azure credentials for connecting to azure subscription.
-client_id : ""
-secret : ""
-tenant : ""
-subscription_id : ""

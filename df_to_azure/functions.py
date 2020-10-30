@@ -1,10 +1,14 @@
-import logging, os
-from .parse_settings import get_settings
+import logging
+import os
+from df_to_azure.parse_settings import get_settings
 import pandas as pd
 
 
 def print_item(group):
-    """Print an Azure object instance."""
+    """
+    Print an Azure object instance.
+    :param group: Azure group
+    """
     logging.info("\tName: {}".format(group.name))
     logging.info("\tId: {}".format(group.id))
     if hasattr(group, "location"):
@@ -16,7 +20,10 @@ def print_item(group):
 
 
 def print_properties(props):
-    """Print a ResourceGroup properties instance."""
+    """
+    Print a ResourceGroup properties instance.
+    :param props: Azure ResourceGroup property
+    """
     if props and hasattr(props, "provisioning_state") and props.provisioning_state:
         logging.info("\tProperties:")
         logging.info("\t\tProvisioning State: {}".format(props.provisioning_state))
@@ -24,7 +31,10 @@ def print_properties(props):
 
 
 def print_activity_run_details(activity_run):
-    """Print activity run details."""
+    """
+    Print activity run details.
+    :param activity_run: Azure activity
+    """
     logging.info("\n\tActivity run details\n")
     logging.info("\tActivity run status: {}".format(activity_run.status))
     if activity_run.status == "Succeeded":
@@ -35,24 +45,21 @@ def print_activity_run_details(activity_run):
         logging.info("\tErrors: {}".format(activity_run.error["message"]))
 
 
-def print_settings():
-    adf_settings = get_settings("settings/yml/adf_settings.yml")
-    azure_settings = get_settings("settings/yml/azure_settings.yml")
+def print_settings() -> None:
+    """
+    :return:
+    """
+    settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
 
-    logging.info(10 * "*" + "\nAZURE SETTINGS\n" + 10 * "*")
-    for k, v in azure_settings.items():
+    logging.info(10 * "*" + "\nAZURE & ADF SETTINGS\n" + 10 * "*")
+    for k, v in settings.items():
         logging.info(k + " = " + v)
     logging.info(34 * "*" + "\n")
-
-    logging.info(10 * "*" + "\nAZURE DATA FACTORY SETTINGS\n" + 10 * "*")
-    for k, v in adf_settings.items():
-        logging.info(k + " = " + v)
-    logging.info(47 * "*" + "\n")
 
 
 def cat_modules(directory, tablename):
 
-    all = list()
+    all_files = list()
     for file in os.listdir(directory):
 
         if file.find(tablename) == -1:
@@ -61,11 +68,11 @@ def cat_modules(directory, tablename):
         file_path = os.path.join(directory, file)
         print(file_path)
         df = pd.read_pickle(file_path)
-        all.append(df)
+        all_files.append(df)
 
-    data = pd.concat(all, axis=0, sort=False)
+    data = pd.concat(all_files, axis=0, sort=False)
 
-    logging.info(f"imported {len(all)} file(s) for table '{tablename}'")
+    logging.info(f"imported {len(all_files)} file(s) for table '{tablename}'")
 
     return data
 
