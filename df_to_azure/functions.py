@@ -49,7 +49,7 @@ def print_settings() -> None:
     """
     :return:
     """
-    settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
+    settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
 
     logging.info(10 * "*" + "\nAZURE & ADF SETTINGS\n" + 10 * "*")
     for k, v in settings.items():

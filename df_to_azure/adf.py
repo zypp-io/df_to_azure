@@ -26,7 +26,7 @@ from azure.storage.blob import BlobServiceClient
 logging.getLogger(__name__).setLevel(logging.INFO)
 
 # global variables
-settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
+settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
 
 
 def create_adf_client():

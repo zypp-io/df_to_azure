@@ -9,7 +9,7 @@ import df_to_azure.adf as adf
 from df_to_azure.parse_settings import get_settings
 
 
-settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
+settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
 
 
 def run_multiple(df_dict, schema, incremental=False, id_field=None):
