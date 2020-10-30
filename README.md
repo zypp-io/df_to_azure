@@ -31,18 +31,45 @@ Based on the id_field, the SQL table is being checked on overlapping values.<br>
 If there are new records, the "old" records will be deleted in the SQL table. <br>
 The new records will be uploaded and appended to the current SQL table.
 
+# Settings
+To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your YAML file.
+Use the following template:
+```yaml
+# --- ADF SETTINGS ---
+# general run settings
+create : False
 
+# data factory settings
+rg_name : ""
+rg_location: "westeurope"
+df_name : ""
 
-## Azure parameters
-because a connection to Azure services is required, we have to set some parameters in 2 seperate yml files.
-##### Azure subscription settings
-The details of the Azure subscription should be placed in the file  `settings/yml/adf_settings.yml`.<br>
-There is a template for this file in the location `settings/templates/adf_settings.yml`
-##### Azure data factory settings
-The details of the Azure subscription should be placed in the file  `settings/yml/azure_settings.yml`.<br>
-There is a template for this file in the location `settings/templates/azure_settings.yml`
+# blob settings
+ls_blob_name : "Python Blob Linked Service"
+ls_blob_account_name : ""
+ls_blob_container_name : ""
+ls_blob_account_key : ""
 
+# SQL settings
+ls_sql_name : "Python SQL Linked Service"
+ls_sql_server_name: ""
+ls_sql_database_name: ""
+ls_sql_database_user: ""
+ls_sql_database_password: ""
 
+# pipeline settings
+trigger : True
+
+# --- AZURE SETTINGS ---
+# azure credentials for connecting to azure subscription.
+client_id : ""
+secret : ""
+tenant : ""
+subscription_id : ""
+```
+
+Place this YAML file somewhere on your laptop. Then add the path to your environment in the variable `AZURE_TO_DF_SETTINGS`. 
+The script will use `os.environ.get('AZURE_TO_DF_SETTINGS')` to import the settings in the YAML file.
 
 
 
