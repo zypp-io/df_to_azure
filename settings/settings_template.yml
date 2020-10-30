@@ -1,4 +1,4 @@
-
+# --- ADF SETTINGS ---
 # general run settings
 create : False
 
@@ -22,3 +22,10 @@ ls_sql_database_password: ""
 
 # pipeline settings
 trigger : True
+
+# --- AZURE SETTINGS ---
+# azure credentials for connecting to azure subscription.
+client_id : ""
+secret : ""
+tenant : ""
+subscription_id : ""

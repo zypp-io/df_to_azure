@@ -1,9 +1,8 @@
 import logging
 import pandas as pd
-from src.export import run
-from src.log import set_logging
+from df_to_azure.export import run
+from df_to_azure.log import set_logging
 from datetime import datetime
-import os
 
 
 if __name__ == "__main__":
@@ -12,7 +11,9 @@ if __name__ == "__main__":
 
     # datasets
     tablename = "sample"
-    df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv")
+    df = pd.read_csv(
+        f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv"
+    )
     schema = "tst"
 
     run(df, tablename, schema, incremental=True, id_field="col_a")
