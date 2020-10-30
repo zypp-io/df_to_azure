@@ -69,6 +69,7 @@ subscription_id : ""
 ```
 
 Place this YAML file somewhere on your laptop. Then add the path to your environment in the variable `AZURE_TO_DF_SETTINGS`. 
+For example `AZURE_TO_DF_SETTINGS='/Users/myname/settings.yml'`
 The script will use `os.environ.get('AZURE_TO_DF_SETTINGS')` to import the settings in the YAML file.
 
 
