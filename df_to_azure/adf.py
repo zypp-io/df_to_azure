@@ -95,10 +95,10 @@ def create_blob_container():
 def create_linked_service_sql():
     conn_string = SecureString(
         value=f"integrated security=False;encrypt=True;connection timeout=30;data "
-              f"source={settings['ls_sql_server_name']}"
-              f";initial catalog={settings['ls_sql_database_name']}"
-              f";user id={settings['ls_sql_database_user']}"
-              f";password={settings['ls_sql_database_password']}"
+        f"source={settings['ls_sql_server_name']}"
+        f";initial catalog={settings['ls_sql_database_name']}"
+        f";user id={settings['ls_sql_database_user']}"
+        f";password={settings['ls_sql_database_password']}"
     )
 
     ls_azure_sql = AzureSqlDatabaseLinkedService(connection_string=conn_string)
@@ -115,7 +115,7 @@ def create_linked_service_sql():
 def create_linked_service_blob():
     storage_string = SecureString(
         value=f"DefaultEndpointsProtocol=https;AccountName={settings['ls_blob_account_name']}"
-              f";AccountKey={settings['ls_blob_account_key']}"
+        f";AccountKey={settings['ls_blob_account_key']}"
     )
 
     ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
@@ -175,9 +175,7 @@ def create_pipeline(tablename):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    adf_client.pipelines.create_or_update(
-        settings["rg_name"], settings["df_name"], p_name, p_obj
-    )
+    adf_client.pipelines.create_or_update(settings["rg_name"], settings["df_name"], p_name, p_obj)
 
     if settings["trigger"]:
         logging.info(f"triggering pipeline run for {tablename}!")
@@ -219,9 +217,7 @@ def create_multiple_activity_pipeline(df_dict):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    adf_client.pipelines.create_or_update(
-        settings["rg_name"], settings["df_name"], p_name, p_obj
-    )
+    adf_client.pipelines.create_or_update(settings["rg_name"], settings["df_name"], p_name, p_obj)
 
     if settings["trigger"]:
         logging.info(
