@@ -1,5 +1,6 @@
 import logging
-import os, sys
+import os
+import sys
 from datetime import datetime
 
 
@@ -8,15 +9,15 @@ def set_logging():
     logfilename = "runlog_" + datetime.now().strftime("%Y%m%d")
     full_path = os.path.join(os.getcwd(), "log")
 
-    logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
-    rootLogger = logging.getLogger()
+    log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
+    root_logger = logging.getLogger()
 
-    fileHandler = logging.FileHandler("{0}/{1}.log".format(full_path, logfilename))
-    fileHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(fileHandler)
+    file_handler = logging.FileHandler("{0}/{1}.log".format(full_path, logfilename))
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
 
-    consoleHandler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(consoleHandler)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(log_formatter)
+    root_logger.addHandler(console_handler)
 
     logging.getLogger().setLevel(logging.INFO)
