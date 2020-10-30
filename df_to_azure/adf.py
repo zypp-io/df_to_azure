@@ -1,12 +1,13 @@
 import os
 import logging
+from df_to_azure.functions import print_item
+from df_to_azure.parse_settings import get_settings
 from azure.mgmt.datafactory.models import *
-from functions import print_item
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
-from parse_settings import get_settings
+
 
 logging.getLogger(__name__).setLevel(logging.INFO)
 
@@ -41,9 +42,7 @@ def create_resourcegroup():
 
     resource_client = create_resource_client()
     rg_params = {"location": settings["rg_location"]}
-    rg = resource_client.resource_groups.create_or_update(
-        settings["rg_name"], rg_params
-    )
+    rg = resource_client.resource_groups.create_or_update(settings["rg_name"], rg_params)
     print_item(rg)
 
 

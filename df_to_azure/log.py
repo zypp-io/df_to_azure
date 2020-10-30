@@ -2,12 +2,14 @@ import logging
 import os
 import sys
 from datetime import datetime
+from df_to_azure.functions import create_dir
 
 
 def set_logging():
 
     logfilename = "runlog_" + datetime.now().strftime("%Y%m%d")
     full_path = os.path.join(os.getcwd(), "log")
+    create_dir(full_path)
 
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
     root_logger = logging.getLogger()

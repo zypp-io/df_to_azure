@@ -1,6 +1,6 @@
 import logging
 import os
-from parse_settings import get_settings
+from df_to_azure.parse_settings import get_settings
 import pandas as pd
 
 
@@ -29,12 +29,8 @@ def print_activity_run_details(activity_run):
     logging.info("\n\tActivity run details\n")
     logging.info("\tActivity run status: {}".format(activity_run.status))
     if activity_run.status == "Succeeded":
-        logging.info(
-            "\tNumber of bytes read: {}".format(activity_run.output["dataRead"])
-        )
-        logging.info(
-            "\tNumber of bytes written: {}".format(activity_run.output["dataWritten"])
-        )
+        logging.info("\tNumber of bytes read: {}".format(activity_run.output["dataRead"]))
+        logging.info("\tNumber of bytes written: {}".format(activity_run.output["dataWritten"]))
         logging.info("\tCopy duration: {}".format(activity_run.output["copyDuration"]))
     else:
         logging.info("\tErrors: {}".format(activity_run.error["message"]))
