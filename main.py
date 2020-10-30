@@ -11,7 +11,9 @@ if __name__ == "__main__":
 
     # datasets
     tablename = "sample"
-    df = pd.read_csv(f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv")
+    df = pd.read_csv(
+        f"/Users/melvinfolkers/Documents/github/df_to_azure/data/sample/{tablename}.csv"
+    )
     schema = "tst"
 
     run(df, tablename, schema, incremental=True, id_field="col_a")
