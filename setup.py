@@ -18,7 +18,7 @@ setup(
     url="https://github.com/zypp-io/df_to_azure",
     packages=find_packages(),
     install_requires=install_requires,
-    entry_points={"console_scripts": ["run=package.module:do_script"]},
+    entry_points={"console_scripts": ["run=df_to_azure.export:run"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
