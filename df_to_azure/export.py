@@ -8,7 +8,7 @@ from . import adf
 from .parse_settings import get_settings
 
 
-settings = get_settings(os.environ.get('AZURE_TO_DF_SETTINGS'))
+settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
 
 
 def run_multiple(df_dict, schema, incremental=False, id_field=None):
@@ -112,7 +112,9 @@ def upload_to_blob(df, tablename):
     stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
 
     full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
-    df.to_csv(full_path_to_file, index=False, sep="^", line_terminator="\n")  # export file to staging
+    df.to_csv(
+        full_path_to_file, index=False, sep="^", line_terminator="\n"
+    )  # export file to staging
 
     blob_service_client = create_blob_service_client()
 
@@ -179,7 +181,9 @@ def get_overlapping_records(df, tablename, schema, id_field):
     del_list = overlapping_records.astype(str)[id_field].to_list()
 
     new_records = df[~df[id_field].isin(current_db[id_field])]
-    logging.info(f"{len(overlapping_records)} updated records and {len(new_records)} new records")
+    logging.info(
+        f"{len(overlapping_records)} updated records and {len(new_records)} new records"
+    )
 
     return del_list
 
