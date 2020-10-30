@@ -1,9 +1,8 @@
 import logging
 import pandas as pd
-from src.export import run
-from src.log import set_logging
+from df_to_azure.export import run
+from df_to_azure.log import set_logging
 from datetime import datetime
-import os
 
 
 if __name__ == "__main__":
