@@ -1,9 +1,10 @@
-from df_to_azure.adf import create_blob_service_client
 from sqlalchemy import create_engine
 import pandas as pd
 import os
 import logging
+from df_to_azure.exceptions import CreateSchemaError
 from df_to_azure.functions import create_dir
+from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import get_settings
 
@@ -133,8 +134,8 @@ def create_schema(schema):
     try:
         execute_stmt(stmt=f"create schema {schema}")
         logging.info(f"succesfully created schema {schema}")
-    except:
-        logging.info(f"did not create schema {schema}")
+    except CreateSchemaError:
+        logging.info(f"CreateSchemaError: did not create schema {schema}")
 
 
 def execute_stmt(stmt):

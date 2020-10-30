@@ -2,9 +2,23 @@ import os
 import logging
 from df_to_azure.functions import print_item
 from df_to_azure.parse_settings import get_settings
-from azure.mgmt.datafactory.models import *
-from azure.common.credentials import ServicePrincipalCredentials
+from df_to_azure.exceptions import CreateContainerError
+from azure.mgmt.datafactory.models import (
+    Factory,
+    SecureString,
+    AzureSqlDatabaseLinkedService,
+    AzureStorageLinkedService,
+    LinkedServiceReference,
+    AzureBlobDataset,
+    PipelineResource,
+    BlobSource,
+    DatasetReference,
+    AzureSqlTableDataset,
+    CopyActivity,
+    SqlSink,
+)
 from azure.mgmt.datafactory import DataFactoryManagementClient
+from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
@@ -74,13 +88,17 @@ def create_blob_container():
     blob_service_client = create_blob_service_client()
     try:
         blob_service_client.create_container(settings["ls_blob_container_name"])
-    except:
-        logging.info("Container already exists.")
+    except CreateContainerError:
+        logging.info("CreateContainerError: Container already exists.")
 
 
 def create_linked_service_sql():
     conn_string = SecureString(
-        value=f"integrated security=False;encrypt=True;connection timeout=30;data source={settings['ls_sql_server_name']};initial catalog={settings['ls_sql_database_name']};user id={settings['ls_sql_database_user']};password={settings['ls_sql_database_password']}"
+        value=f"integrated security=False;encrypt=True;connection timeout=30;data "
+              f"source={settings['ls_sql_server_name']}"
+              f";initial catalog={settings['ls_sql_database_name']}"
+              f";user id={settings['ls_sql_database_user']}"
+              f";password={settings['ls_sql_database_password']}"
     )
 
     ls_azure_sql = AzureSqlDatabaseLinkedService(connection_string=conn_string)
@@ -96,12 +114,13 @@ def create_linked_service_sql():
 
 def create_linked_service_blob():
     storage_string = SecureString(
-        value=f"DefaultEndpointsProtocol=https;AccountName={settings['ls_blob_account_name']};AccountKey={settings['ls_blob_account_key']}"
+        value=f"DefaultEndpointsProtocol=https;AccountName={settings['ls_blob_account_name']}"
+              f";AccountKey={settings['ls_blob_account_key']}"
     )
 
     ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
     adf_client = create_adf_client()
-    ls = adf_client.linked_services.create_or_update(
+    adf_client.linked_services.create_or_update(
         settings["rg_name"],
         settings["df_name"],
         settings["ls_blob_name"],
@@ -127,7 +146,7 @@ def create_input_blob(tablename):
         },
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(
+    adf_client.datasets.create_or_update(
         settings["rg_name"], settings["df_name"], ds_name, ds_azure_blob
     )
 
@@ -142,7 +161,7 @@ def create_output_sql(tablename, schema):
         table_name=f"{schema}.{tablename}",
     )
     adf_client = create_adf_client()
-    ds = adf_client.datasets.create_or_update(
+    adf_client.datasets.create_or_update(
         settings["rg_name"], settings["df_name"], ds_name, data_azureSql
     )
 
@@ -156,7 +175,7 @@ def create_pipeline(tablename):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    p = adf_client.pipelines.create_or_update(
+    adf_client.pipelines.create_or_update(
         settings["rg_name"], settings["df_name"], p_name, p_obj
     )
 
@@ -200,7 +219,7 @@ def create_multiple_activity_pipeline(df_dict):
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
-    p = adf_client.pipelines.create_or_update(
+    adf_client.pipelines.create_or_update(
         settings["rg_name"], settings["df_name"], p_name, p_obj
     )
 

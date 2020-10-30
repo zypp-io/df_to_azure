@@ -5,7 +5,10 @@ import pandas as pd
 
 
 def print_item(group):
-    """Print an Azure object instance."""
+    """
+    Print an Azure object instance.
+    :param group: Azure group
+    """
     logging.info("\tName: {}".format(group.name))
     logging.info("\tId: {}".format(group.id))
     if hasattr(group, "location"):
@@ -17,7 +20,10 @@ def print_item(group):
 
 
 def print_properties(props):
-    """Print a ResourceGroup properties instance."""
+    """
+    Print a ResourceGroup properties instance.
+    :param props: Azure ResourceGroup property
+    """
     if props and hasattr(props, "provisioning_state") and props.provisioning_state:
         logging.info("\tProperties:")
         logging.info("\t\tProvisioning State: {}".format(props.provisioning_state))
@@ -25,7 +31,10 @@ def print_properties(props):
 
 
 def print_activity_run_details(activity_run):
-    """Print activity run details."""
+    """
+    Print activity run details.
+    :param activity_run: Azure activity
+    """
     logging.info("\n\tActivity run details\n")
     logging.info("\tActivity run status: {}".format(activity_run.status))
     if activity_run.status == "Succeeded":
@@ -36,7 +45,10 @@ def print_activity_run_details(activity_run):
         logging.info("\tErrors: {}".format(activity_run.error["message"]))
 
 
-def print_settings():
+def print_settings() -> None:
+    """
+    :return:
+    """
     settings = get_settings(os.environ.get("AZURE_TO_DF_SETTINGS"))
 
     logging.info(10 * "*" + "\nAZURE & ADF SETTINGS\n" + 10 * "*")
