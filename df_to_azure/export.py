@@ -12,7 +12,7 @@ from df_to_azure.parse_settings import get_settings
 settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
 
 
-def run_multiple(df_dict, schema, incremental=False, id_field=None):
+def run_multiple(df_dict, schema, method="create", id_field=None):
     if settings["create"]:
         create_schema(schema)
 
@@ -26,7 +26,7 @@ def run_multiple(df_dict, schema, incremental=False, id_field=None):
         adf.create_linked_service_blob()
 
     for table_name, df in df_dict.items():
-        upload_dataset(table_name, df, schema, incremental, id_field)
+        upload_dataset(table_name, df, schema, method, id_field)
         adf.create_input_blob(table_name)
         adf.create_output_sql(table_name, schema)
 
@@ -34,7 +34,7 @@ def run_multiple(df_dict, schema, incremental=False, id_field=None):
     adf.create_multiple_activity_pipeline(df_dict)
 
 
-def run(df, tablename, schema, incremental=False, id_field=None):
+def run(df, tablename, schema, method="create", id_field=None):
     if settings["create"]:
         create_schema(schema)
 
@@ -47,7 +47,7 @@ def run(df, tablename, schema, incremental=False, id_field=None):
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
 
-    upload_dataset(tablename, df, schema, incremental, id_field)
+    upload_dataset(tablename, df, schema, method, id_field)
     adf.create_input_blob(tablename)
     adf.create_output_sql(tablename, schema)
 
@@ -55,18 +55,18 @@ def run(df, tablename, schema, incremental=False, id_field=None):
     adf.create_pipeline(tablename)
 
 
-def upload_dataset(tablename, df, schema, incremental, id_field):
+def upload_dataset(tablename, df, schema, method, id_field):
 
     if len(df) == 0:
         return logging.info("no new records to upload.")
 
-    if not incremental:
+    if method == "create":
         push_to_azure(
             df=df.head(n=0),
             tablename=tablename,
             schema_name=schema,
         )
-    elif incremental:
+    if method == "upsert":
         delete_current_records(df, tablename, schema, id_field)
 
     upload_to_blob(df, tablename)
