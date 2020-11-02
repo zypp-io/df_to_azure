@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # testing.
 
     run(
-        df=pd.read_csv("data/sample/sample_1.csv"),
+        df=pd.read_csv("data/sample_1.csv"),
         tablename="sample",
         schema="test",
         method="create",
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     time.sleep(5)
 
     run(
-        df=pd.read_csv("data/sample/sample_2.csv"),
+        df=pd.read_csv("data/sample_2.csv"),
         tablename="sample",
         schema="test",
         method="upsert",
