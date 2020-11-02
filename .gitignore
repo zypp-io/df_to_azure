@@ -7,7 +7,8 @@ __pycache__/
 *.so
 
 settings/yml
-/data
+
+/data/staging
 
 # Distribution / packaging
 .Python
