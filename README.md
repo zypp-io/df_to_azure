@@ -22,11 +22,11 @@ based on the following attributes, it is possible to bulk insert your dataframe 
         1. df: dataframe you wish to export
         2. tablename: desired name of the table 
         3. schema: desired sql schema
-        4. incremental:option for only inserting new data
+        4. method:option for "create" "append" or "upsert"
         5. id_field: id field of the table. necessary if 4 is set to True
 
-##### Incremental or full update
-it is possible to only update the SQL table with new records, if present in the dataframe you want to upload.<br>
+##### upsert / create or append
+it is possible to upsert the SQL table with (new) records, if present in the dataframe you want to upload.<br>
 Based on the id_field, the SQL table is being checked on overlapping values.<br>
 If there are new records, the "old" records will be deleted in the SQL table. <br>
 The new records will be uploaded and appended to the current SQL table.
