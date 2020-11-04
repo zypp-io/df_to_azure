@@ -95,7 +95,7 @@ def upload_dataset(table):
 def push_to_azure(table):
     connection_string = auth_azure(table.azure)
     engine = create_engine(connection_string, pool_size=10, max_overflow=20)
-    table.df.to_sql(
+    table.df.head(n=0).to_sql(
         table.name,
         engine,
         chunksize=100000,
