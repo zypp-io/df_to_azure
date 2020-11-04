@@ -6,95 +6,114 @@ from df_to_azure.exceptions import CreateSchemaError
 from df_to_azure.functions import create_dir
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
-from df_to_azure.parse_settings import get_settings
+from df_to_azure.parse_settings import TableParameters
 
 
-settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
+def table_list(df_dict, schema, method, id_field, local):
+    tables = []
+    for name, df in df_dict.items():
+
+        table = TableParameters(
+            df=df,
+            tablename=name,
+            schema=schema,
+            method=method,
+            id_field=id_field,
+            local=local,
+        )
+
+        tables.append(table)
+
+    return tables
 
 
-def run_multiple(df_dict, schema, method="create", id_field=None):
-    if settings["create"]:
-        create_schema(schema)
+def run_multiple(df_dict, schema, method="create", id_field=None, local=False):
 
-        # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-        adf.create_blob_container()
+    tables = table_list(df_dict, schema, method, id_field, local)
 
-        # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
-
-    for table_name, df in df_dict.items():
-        upload_dataset(table_name, df, schema, method, id_field)
-        adf.create_input_blob(table_name)
-        adf.create_output_sql(table_name, schema)
-
-    # pipelines
-    adf.create_multiple_activity_pipeline(df_dict)
-
-
-def run(df, tablename, schema, method="create", id_field=None):
-    if settings["create"]:
-        create_schema(schema)
+    if tables[0].azure["create"]:
+        create_schema(tables[0])
 
         # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-        adf.create_blob_container()
+        adf.create_resourcegroup(tables[0].azure)
+        adf.create_datafactory(tables[0].azure)
+        adf.create_blob_container(tables[0].azure)
 
         # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
+        adf.create_linked_service_sql(tables[0].azure)
+        adf.create_linked_service_blob(tables[0].azure)
 
-    upload_dataset(tablename, df, schema, method, id_field)
-    adf.create_input_blob(tablename)
-    adf.create_output_sql(tablename, schema)
+    for table in tables:
+
+        upload_dataset(table)
+        adf.create_input_blob(table)
+        adf.create_output_sql(table)
 
     # pipelines
-    adf.create_pipeline(tablename)
+    adf.create_multiple_activity_pipeline(tables)
 
 
-def upload_dataset(tablename, df, schema, method, id_field):
+def run(df, tablename, schema, method="create", id_field=None, local=False):
+    table = TableParameters(
+        df=df, tablename=tablename, schema=schema, method=method, id_field=id_field, local=local
+    )
 
-    if len(df) == 0:
+    if table.azure["create"]:
+        create_schema(table)
+
+        # azure components
+        adf.create_resourcegroup(table.azure)
+        adf.create_datafactory(table.azure)
+        adf.create_blob_container(table.azure)
+
+        # linked services
+        adf.create_linked_service_sql(table.azure)
+        adf.create_linked_service_blob(table.azure)
+
+    upload_dataset(table)
+    adf.create_input_blob(table)
+    adf.create_output_sql(table)
+
+    # pipelines
+    adf.create_pipeline(table)
+
+
+def upload_dataset(table):
+
+    if len(table.df) == 0:
         return logging.info("no new records to upload.")
 
-    if method == "create":
-        push_to_azure(
-            df=df.head(n=0),
-            tablename=tablename,
-            schema_name=schema,
-        )
-    if method == "upsert":
-        delete_current_records(df, tablename, schema, id_field)
+    if table.method == "create":
+        push_to_azure(table)
+    if table.method == "upsert":
+        delete_current_records(table)
 
-    upload_to_blob(df, tablename)
-    logging.info("Finished.number of transactions:{}".format(len(df)))
+    upload_to_blob(table)
+    logging.info("Finished.number of transactions:{}".format(len(table.df)))
 
 
-def push_to_azure(df, tablename, schema_name):
-    connection_string = auth_azure()
+def push_to_azure(table):
+    connection_string = auth_azure(table.azure)
     engine = create_engine(connection_string, pool_size=10, max_overflow=20)
-    df.to_sql(
-        tablename,
+    table.df.to_sql(
+        table.name,
         engine,
         chunksize=100000,
         if_exists="replace",
         index=False,
-        schema=schema_name,
+        schema=table.schema,
     )
-    number_of_columns = str(len(df.columns))
+    number_of_columns = str(len(table.df.columns))
 
     result = (
-        "push successful ({}):".format(tablename),
-        len(df),
+        "push successful ({}):".format(table.name),
+        len(table.df),
         "records pushed to Microsoft Azure ({} columns)".format(number_of_columns),
     )
     logging.info(result)
 
 
-def auth_azure():
+def auth_azure(settings):
 
     connectionstring = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         settings["ls_sql_database_user"],
@@ -107,43 +126,42 @@ def auth_azure():
     return connectionstring
 
 
-def upload_to_blob(df, tablename):
+def upload_to_blob(table):
 
     current_dir = os.path.dirname(__file__)
     stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
 
-    full_path_to_file = os.path.join(stagingdir, tablename + ".csv")
-    df.to_csv(
+    full_path_to_file = os.path.join(stagingdir, table.name + ".csv")
+    table.df.to_csv(
         full_path_to_file, index=False, sep="^", line_terminator="\n"
     )  # export file to staging
 
-    blob_service_client = create_blob_service_client()
+    blob_service_client = create_blob_service_client(table.azure)
 
     blob_client = blob_service_client.get_blob_client(
-        container=settings["ls_blob_container_name"],
-        blob=f"{tablename}/{tablename}",
+        container=table.azure["ls_blob_container_name"],
+        blob=f"{table.name}/{table.name}",
     )
 
-    logging.info(f"start uploading blob {tablename}...")
+    logging.info(f"start uploading blob {table.name}...")
     with open(full_path_to_file, "rb") as data:
         blob_client.upload_blob(data, overwrite=True)
-    logging.info(f"finished uploading blob {tablename}!")
+    logging.info(f"finished uploading blob {table.name}!")
 
 
-def create_schema(schema):
+def create_schema(table):
     try:
-        execute_stmt(stmt=f"create schema {schema}")
-        logging.info(f"succesfully created schema {schema}")
+        execute_stmt(stmt=f"create schema {table.schema}", settings=table.azure)
     except CreateSchemaError:
-        logging.info(f"CreateSchemaError: did not create schema {schema}")
+        logging.info(f"CreateSchemaError: did not create schema {table.schema}")
 
 
-def execute_stmt(stmt):
+def execute_stmt(stmt, settings):
     """
     :param stmt: SQL statement to be executed
     :return: executes the statment
     """
-    conn = auth_azure()
+    conn = auth_azure(settings)
     engn = create_engine(conn)
 
     with engn.connect() as con:
@@ -152,7 +170,7 @@ def execute_stmt(stmt):
     return rs
 
 
-def delete_current_records(df, tablename, schema, id_field):
+def delete_current_records(table):
     """
     :param df: the dataframe containing new records
     :param tablename: the name of the table
@@ -161,16 +179,16 @@ def delete_current_records(df, tablename, schema, id_field):
     :return: executes a delete statement in Azure SQL for the new records.
     """
 
-    del_list = get_overlapping_records(df, tablename, schema, id_field)
-    stmt = create_sql_delete_stmt(del_list, tablename, schema, id_field)
+    del_list = get_overlapping_records(table)
+    stmt = create_sql_delete_stmt(del_list, table)
 
     if len(del_list):
-        execute_stmt(stmt)
+        execute_stmt(stmt, settings=table.azure)
     else:
         logging.info("skip deleting. no records in delete statement")
 
 
-def get_overlapping_records(df, tablename, schema, id_field):
+def get_overlapping_records(table):
     """
     :param df: the dataframe containing new records
     :param tablename: the name of the table
@@ -178,20 +196,20 @@ def get_overlapping_records(df, tablename, schema, id_field):
     :param id_field: field to check if the values are already in the database
     :return:  a list of records that are overlapping
     """
-    conn = auth_azure()
+    conn = auth_azure(table.azure)
     engn = create_engine(conn)
 
-    current_db = pd.read_sql_table(tablename, engn, schema=schema)
-    overlapping_records = current_db[current_db[id_field].isin(df[id_field])]
-    del_list = overlapping_records.astype(str)[id_field].to_list()
+    current_db = pd.read_sql_table(table.name, engn, schema=table.schema)
+    overlapping_records = current_db[current_db[table.id_field].isin(table.df[table.id_field])]
+    del_list = overlapping_records.astype(str)[table.id_field].to_list()
 
-    new_records = df[~df[id_field].isin(current_db[id_field])]
+    new_records = table.df[~table.df[table.id_field].isin(current_db[table.id_field])]
     logging.info(f"{len(overlapping_records)} updated records and {len(new_records)} new records")
 
     return del_list
 
 
-def create_sql_delete_stmt(del_list, tablename, schema, id_field):
+def create_sql_delete_stmt(del_list, table):
     """
     :param del_list: list of records that need to be formatted in SQL delete statement.
     :param tablename: the name of the table
@@ -203,7 +221,7 @@ def create_sql_delete_stmt(del_list, tablename, schema, id_field):
     del_list = ["'" + x + "'" for x in del_list]
 
     sql_list = ", ".join(del_list)
-    sql_stmt = f"DELETE FROM {schema}.{tablename} WHERE {id_field} IN ({sql_list})"
+    sql_stmt = f"DELETE FROM {table.schema}.{table.name} WHERE {table.id_field} IN ({sql_list})"
     logging.info(f"{len(del_list)} run_id's in delete statement")
 
     return sql_stmt
