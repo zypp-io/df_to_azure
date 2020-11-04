@@ -16,7 +16,7 @@ class TableParameters:
 
     def select_settings(self):
         if self.local:
-            logging.info("using local settings in file 'azure.yml'")
+            logging.debug("using local settings in file 'azure.yml'")
             settings = get_settings("azure.yml")
         else:
             settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
