@@ -85,7 +85,7 @@ def create_blob_container(settings):
     blob_service_client = create_blob_service_client(settings)
     try:
         blob_service_client.create_container(settings["ls_blob_container_name"])
-    except:
+    except CreateContainerError:
         logging.info("CreateContainerError: Container already exists.")
 
 
