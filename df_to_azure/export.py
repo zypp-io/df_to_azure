@@ -152,7 +152,7 @@ def upload_to_blob(table):
 def create_schema(table):
     try:
         execute_stmt(stmt=f"create schema {table.schema}", settings=table.azure)
-    except:
+    except CreateSchemaError:
         logging.info(f"CreateSchemaError: did not create schema {table.schema}")
 
 
