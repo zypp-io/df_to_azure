@@ -3,6 +3,9 @@ import pandas as pd
 import os
 
 
+YAML_PATH = os.path.join("..", "azure.yml")
+
+
 def test_create():
 
     run(
@@ -11,7 +14,7 @@ def test_create():
         schema="test",
         method="create",
         id_field="col_a",
-        local=True,
+        yaml_path=YAML_PATH,
     )
 
 
@@ -23,7 +26,7 @@ def test_upsert():
         schema="test",
         method="upsert",
         id_field="col_a",
-        local=True,
+        yaml_path=YAML_PATH,
     )
 
 
@@ -34,4 +37,4 @@ def test_run_multiple():
         if file.endswith(".csv"):
             df_dict[file.split(".csv")[0]] = pd.read_csv(os.path.join("data", file))
 
-    run_multiple(df_dict, schema="test", method="create", local=True)
+    run_multiple(df_dict, schema="test", method="create", yaml_path=YAML_PATH)

@@ -1,6 +1,6 @@
 import logging
 import os
-from df_to_azure.parse_settings import get_settings
+from df_to_azure.parse_settings import TableParameters
 import pandas as pd
 
 
@@ -49,7 +49,8 @@ def print_settings() -> None:
     """
     :return:
     """
-    settings = get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
+
+    settings = TableParameters.get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
 
     logging.info(10 * "*" + "\nAZURE & ADF SETTINGS\n" + 10 * "*")
     for k, v in settings.items():

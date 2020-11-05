@@ -9,17 +9,17 @@ import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
 
 
-def table_list(df_dict, schema, method, id_field, local):
+def table_list(df_dict: dict, schema: str, method: str, id_field: str, yaml_path: str) -> list:
     tables = []
     for name, df in df_dict.items():
 
         table = TableParameters(
             df=df,
-            tablename=name,
+            name=name,
             schema=schema,
             method=method,
             id_field=id_field,
-            local=local,
+            yaml_path=yaml_path,
         )
 
         tables.append(table)
@@ -27,9 +27,9 @@ def table_list(df_dict, schema, method, id_field, local):
     return tables
 
 
-def run_multiple(df_dict, schema, method="create", id_field=None, local=False):
+def run_multiple(df_dict, schema, method="create", id_field=None, yaml_path=None):
 
-    tables = table_list(df_dict, schema, method, id_field, local)
+    tables = table_list(df_dict, schema, method, id_field, yaml_path)
 
     if tables[0].azure["create"]:
         create_schema(tables[0])
@@ -53,9 +53,9 @@ def run_multiple(df_dict, schema, method="create", id_field=None, local=False):
     adf.create_multiple_activity_pipeline(tables)
 
 
-def run(df, tablename, schema, method="create", id_field=None, local=False):
+def run(df, tablename, schema, method="create", id_field=None, yaml_path=None):
     table = TableParameters(
-        df=df, tablename=tablename, schema=schema, method=method, id_field=id_field, local=local
+        df=df, name=tablename, schema=schema, method=method, id_field=id_field, yaml_path=yaml_path
     )
 
     if table.azure["create"]:
