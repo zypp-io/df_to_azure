@@ -3,7 +3,7 @@ name: DF to Azure
 on: [push]
 
 jobs:
-  build:
+  lint:
 
     runs-on: ubuntu-latest
     strategy:
