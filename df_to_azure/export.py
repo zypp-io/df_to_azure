@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import logging
 from df_to_azure.exceptions import CreateSchemaError
-from df_to_azure.functions import create_dir
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
@@ -125,8 +124,7 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    staging_dir = create_dir(os.path.join(table.cwd, "tmp"))
-    full_path_to_file = os.path.join(staging_dir, table.name + ".csv")
+    full_path_to_file = os.path.join("tmp", table.name + ".csv")
 
     table.df.to_csv(
         full_path_to_file, index=False, sep="^", line_terminator="\n"
