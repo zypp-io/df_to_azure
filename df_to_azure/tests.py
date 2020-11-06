@@ -1,5 +1,4 @@
 from df_to_azure.export import run, run_multiple
-from df_to_azure.parse_settings import TableParameters
 import pandas as pd
 import os
 
@@ -38,4 +37,4 @@ def test_run_multiple():
         if file.endswith(".csv"):
             df_dict[file.split(".csv")[0]] = pd.read_csv(os.path.join("data", file))
 
-    run_multiple(df_dict, schema="test", method="create", cwd=cwd)
+    run_multiple(df_dict, schema="test", method="create", cwd=YAML_PATH)
