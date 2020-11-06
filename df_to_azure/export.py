@@ -14,12 +14,7 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str)
     for name, df in df_dict.items():
 
         table = TableParameters(
-            df=df,
-            name=name,
-            schema=schema,
-            method=method,
-            id_field=id_field,
-            cwd=cwd
+            df=df, name=name, schema=schema, method=method, id_field=id_field, cwd=cwd
         )
 
         tables.append(table)
