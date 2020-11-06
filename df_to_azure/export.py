@@ -129,7 +129,7 @@ def auth_azure(settings):
 def upload_to_blob(table):
 
     current_dir = os.path.dirname(__file__)
-    stagingdir = create_dir(os.path.join(current_dir, "../data", "staging"))
+    stagingdir = create_dir(os.path.join(current_dir, "..", "data", "staging"))
 
     full_path_to_file = os.path.join(stagingdir, table.name + ".csv")
     table.df.to_csv(
