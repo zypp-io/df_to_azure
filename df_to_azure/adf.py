@@ -22,9 +22,6 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
 
-logging.getLogger(__name__).setLevel(logging.INFO)
-
-
 def create_adf_client():
     credentials = ServicePrincipalCredentials(
         client_id=os.environ.get("client_id"),
