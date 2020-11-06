@@ -1,4 +1,5 @@
-from df_to_azure.export import run, run_multiple
+from df_to_azure.export import run, run_multiple, download_blob
+from df_to_azure.parse_settings import TableParameters
 import pandas as pd
 import os
 
@@ -14,7 +15,7 @@ def test_create():
         schema="test",
         method="create",
         id_field="col_a",
-        yaml_path=YAML_PATH,
+        cwd=YAML_PATH,
     )
 
 
@@ -26,7 +27,7 @@ def test_upsert():
         schema="test",
         method="upsert",
         id_field="col_a",
-        yaml_path=YAML_PATH,
+        cwd=YAML_PATH,
     )
 
 
@@ -38,3 +39,15 @@ def test_run_multiple():
             df_dict[file.split(".csv")[0]] = pd.read_csv(os.path.join("data", file))
 
     run_multiple(df_dict, schema="test", method="create", yaml_path=YAML_PATH)
+
+
+if __name__ == '__main__':
+    table = TableParameters(
+        df=pd.read_csv("../data/sample_2.csv"),
+        name="sample",
+        schema="test",
+        method="upsert",
+        id_field="col_a",
+        cwd=YAML_PATH,
+    )
+    download_blob(table)

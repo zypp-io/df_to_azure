@@ -9,7 +9,7 @@ import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
 
 
-def table_list(df_dict: dict, schema: str, method: str, id_field: str, yaml_path: str) -> list:
+def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
     tables = []
     for name, df in df_dict.items():
 
@@ -19,7 +19,7 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, yaml_path
             schema=schema,
             method=method,
             id_field=id_field,
-            yaml_path=yaml_path,
+            cwd=cwd
         )
 
         tables.append(table)
@@ -27,21 +27,22 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, yaml_path
     return tables
 
 
-def run_multiple(df_dict, schema, method="create", id_field=None, yaml_path=None):
+def run_multiple(df_dict, schema, method="create", id_field=None, cwd=None):
 
-    tables = table_list(df_dict, schema, method, id_field, yaml_path)
+    tables = table_list(df_dict, schema, method, id_field, cwd)
 
-    if tables[0].azure["create"]:
+    create = True if os.environ.get("create") == "True" else False
+    if create:
         create_schema(tables[0])
 
         # azure components
-        adf.create_resourcegroup(tables[0].azure)
-        adf.create_datafactory(tables[0].azure)
-        adf.create_blob_container(tables[0].azure)
+        adf.create_resourcegroup()
+        adf.create_datafactory()
+        adf.create_blob_container()
 
         # linked services
-        adf.create_linked_service_sql(tables[0].azure)
-        adf.create_linked_service_blob(tables[0].azure)
+        adf.create_linked_service_sql()
+        adf.create_linked_service_blob()
 
     for table in tables:
 
@@ -53,22 +54,22 @@ def run_multiple(df_dict, schema, method="create", id_field=None, yaml_path=None
     adf.create_multiple_activity_pipeline(tables)
 
 
-def run(df, tablename, schema, method="create", id_field=None, yaml_path=None):
+def run(df, tablename, schema, method="create", id_field=None, cwd=None):
     table = TableParameters(
-        df=df, name=tablename, schema=schema, method=method, id_field=id_field, yaml_path=yaml_path
+        df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd
     )
-
-    if table.azure["create"]:
+    create = True if os.environ.get("create") == "True" else False
+    if create:
         create_schema(table)
 
         # azure components
-        adf.create_resourcegroup(table.azure)
-        adf.create_datafactory(table.azure)
-        adf.create_blob_container(table.azure)
+        adf.create_resourcegroup()
+        adf.create_datafactory()
+        adf.create_blob_container()
 
         # linked services
-        adf.create_linked_service_sql(table.azure)
-        adf.create_linked_service_blob(table.azure)
+        adf.create_linked_service_sql()
+        adf.create_linked_service_blob()
 
     upload_dataset(table)
     adf.create_input_blob(table)
@@ -93,55 +94,48 @@ def upload_dataset(table):
 
 
 def push_to_azure(table):
-    connection_string = auth_azure(table.azure)
+    connection_string = auth_azure()
     engine = create_engine(connection_string, pool_size=10, max_overflow=20)
     table.df.head(n=0).to_sql(
         table.name,
         engine,
-        chunksize=100000,
         if_exists="replace",
         index=False,
         schema=table.schema,
     )
-    number_of_columns = str(len(table.df.columns))
-
     result = (
-        "push successful ({}):".format(table.name),
+        f"push successful ({table.name}):",
         len(table.df),
-        "records pushed to Microsoft Azure ({} columns)".format(number_of_columns),
+        f"records pushed to Microsoft Azure ({table.df.shape[1]} columns)",
     )
     logging.info(result)
 
 
-def auth_azure(settings):
+def auth_azure():
 
-    connectionstring = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-        settings["ls_sql_database_user"],
-        settings["ls_sql_database_password"],
-        settings["ls_sql_server_name"],
-        settings["ls_sql_database_name"],
+    connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
+        os.environ.get("ls_sql_database_user"),
+        os.environ.get("ls_sql_database_password"),
+        os.environ.get("ls_sql_server_name"),
+        os.environ.get("ls_sql_database_name"),
         "ODBC Driver 17 for SQL Server",
     )
 
-    return connectionstring
+    return connection_string
 
 
 def upload_to_blob(table):
+    blob_client = create_blob_service_client()
+    blob_client = blob_client.get_blob_client(
+        container=os.environ.get("ls_blob_container_name"),
+        blob=f"{table.name}/{table.name}",
+    )
+    staging_dir = create_dir(os.path.join(table.cwd, "staging"))
+    full_path_to_file = os.path.join(staging_dir, table.name + ".csv")
 
-    current_dir = os.path.dirname(__file__)
-    stagingdir = create_dir(os.path.join(current_dir, "..", "data", "staging"))
-
-    full_path_to_file = os.path.join(stagingdir, table.name + ".csv")
     table.df.to_csv(
         full_path_to_file, index=False, sep="^", line_terminator="\n"
     )  # export file to staging
-
-    blob_service_client = create_blob_service_client(table.azure)
-
-    blob_client = blob_service_client.get_blob_client(
-        container=table.azure["ls_blob_container_name"],
-        blob=f"{table.name}/{table.name}",
-    )
 
     logging.info(f"start uploading blob {table.name}...")
     with open(full_path_to_file, "rb") as data:
@@ -149,19 +143,33 @@ def upload_to_blob(table):
     logging.info(f"finished uploading blob {table.name}!")
 
 
+# TODO: create download_blob method
+# def download_blob(table):
+#     blob_client = create_blob_service_client()
+#     blob_list = blob_client.list_blobs()
+#     blob_client = blob_client.get_blob_client(
+#         container=table.azure["ls_blob_container_name"],
+#         blob=f"{table.name}/{table.name}",
+#     )
+#     download_file_path = os.path.join(local_path, filename.split('/')[-1:][0])
+#
+#     with open(download_file_path, "wb") as download_file:
+#         download_file.write(blob_client.download_blob().readall())
+
+
 def create_schema(table):
     try:
-        execute_stmt(stmt=f"create schema {table.schema}", settings=table.azure)
+        execute_stmt(stmt=f"create schema {table.schema}")
     except CreateSchemaError:
         logging.info(f"CreateSchemaError: did not create schema {table.schema}")
 
 
-def execute_stmt(stmt, settings):
+def execute_stmt(stmt):
     """
     :param stmt: SQL statement to be executed
     :return: executes the statment
     """
-    conn = auth_azure(settings)
+    conn = auth_azure()
     engn = create_engine(conn)
 
     with engn.connect() as con:
@@ -183,7 +191,7 @@ def delete_current_records(table):
     stmt = create_sql_delete_stmt(del_list, table)
 
     if len(del_list):
-        execute_stmt(stmt, settings=table.azure)
+        execute_stmt(stmt)
     else:
         logging.info("skip deleting. no records in delete statement")
 
@@ -196,7 +204,7 @@ def get_overlapping_records(table):
     :param id_field: field to check if the values are already in the database
     :return:  a list of records that are overlapping
     """
-    conn = auth_azure(table.azure)
+    conn = auth_azure()
     engn = create_engine(conn)
 
     current_db = pd.read_sql_table(table.name, engn, schema=table.schema)
