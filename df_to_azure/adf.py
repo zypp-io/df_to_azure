@@ -2,7 +2,6 @@ import logging
 import os
 from df_to_azure.functions import print_item
 from df_to_azure.exceptions import CreateContainerError
-from df_to_azure.parse_settings import TableParameters
 from azure.mgmt.datafactory.models import (
     Factory,
     SecureString,
