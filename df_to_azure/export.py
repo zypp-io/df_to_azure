@@ -124,7 +124,7 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    full_path_to_file = os.path.join("tmp", table.name + ".csv")
+    full_path_to_file = os.path.join("/tmp", table.name + ".csv")
 
     table.df.to_csv(
         full_path_to_file, index=False, sep="^", line_terminator="\n"
