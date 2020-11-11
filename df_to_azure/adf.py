@@ -171,7 +171,8 @@ def create_pipeline(table):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    if table.azure["trigger"]:
+    trigger = True if os.environ.get("trigger") == "True" else False
+    if trigger:
         logging.info(f"triggering pipeline run for {table.name}!")
         adf_client.pipelines.create_run(
             os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
