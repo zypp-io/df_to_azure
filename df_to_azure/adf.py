@@ -22,31 +22,31 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
 
-def create_adf_client():
+def create_service_principal_credentials():
     credentials = ServicePrincipalCredentials(
         client_id=os.environ.get("client_id"),
         secret=os.environ.get("secret"),
         tenant=os.environ.get("tenant"),
     )
 
+    return credentials
+
+
+def create_adf_client():
+    credentials = create_service_principal_credentials()
     adf_client = DataFactoryManagementClient(credentials, os.environ.get("subscription_id"))
 
     return adf_client
 
 
 def create_resource_client():
-    credentials = ServicePrincipalCredentials(
-        client_id=os.environ.get("client_id"),
-        secret=os.environ.get("secret"),
-        tenant=os.environ.get("tenant"),
-    )
+    credentials = create_service_principal_credentials()
     resource_client = ResourceManagementClient(credentials, os.environ.get("subscription_id"))
 
     return resource_client
 
 
 def create_resourcegroup():
-
     resource_client = create_resource_client()
     rg_params = {"location": os.environ.get("rg_location")}
     rg = resource_client.resource_groups.create_or_update(os.environ.get("rg_name"), rg_params)
@@ -54,7 +54,6 @@ def create_resourcegroup():
 
 
 def create_datafactory():
-
     df_resource = Factory(location=os.environ.get("rg_location"))
     adf_client = create_adf_client()
     df = adf_client.factories.create_or_update(
