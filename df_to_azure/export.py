@@ -99,7 +99,7 @@ def push_to_azure(table):
         if_exists="replace",
         index=False,
         schema=table.schema,
-        dtype=col_types
+        dtype=col_types,
     )
     result = (
         f"push successful ({table.name}):",
@@ -232,7 +232,7 @@ def convert_timedelta_to_seconds(df: pd.DataFrame) -> pd.DataFrame:
     df: pd.DataFrame
         DataFrame where timedelta columns are converted to seconds.
     """
-    td_cols = df.iloc[:1].select_dtypes('timedelta').columns
+    td_cols = df.iloc[:1].select_dtypes("timedelta").columns
 
     if len(td_cols):
         df[td_cols] = df[td_cols].apply(lambda x: x.dt.total_seconds())
@@ -259,20 +259,22 @@ def column_types(df: pd.DataFrame, text_length: int = 100, decimal_precision: in
         Dictionary with mapping of pandas dtypes to SQLAlchemy types.
     """
     type_conversion = {
-        dtype('O'): String(length=text_length),
+        dtype("O"): String(length=text_length),
         pd.StringDtype(): String(length=text_length),
-        dtype('int64'): Integer(),
-        dtype('int32'): Integer(),
-        dtype('int16'): Integer(),
-        dtype('int8'): Integer(),
+        dtype("int64"): Integer(),
+        dtype("int32"): Integer(),
+        dtype("int16"): Integer(),
+        dtype("int8"): Integer(),
         pd.Int64Dtype(): Integer(),
-        dtype('float64'): Float(precision=decimal_precision),
-        dtype('float32'): Float(precision=decimal_precision),
-        dtype('float16'): Float(precision=decimal_precision),
-        dtype('<M8[ns]'): DateTime(),
-        dtype('bool'): Boolean()
+        dtype("float64"): Float(precision=decimal_precision),
+        dtype("float32"): Float(precision=decimal_precision),
+        dtype("float16"): Float(precision=decimal_precision),
+        dtype("<M8[ns]"): DateTime(),
+        dtype("bool"): Boolean(),
     }
 
-    col_types = {col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()}
+    col_types = {
+        col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()
+    }
 
     return col_types
