@@ -1,6 +1,5 @@
 import logging
 import os
-from df_to_azure.parse_settings import TableParameters
 import pandas as pd
 
 

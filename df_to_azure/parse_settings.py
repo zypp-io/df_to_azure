@@ -3,7 +3,15 @@ from typing import Union
 
 
 class TableParameters:
-    def __init__(self, df: DataFrame, name: str, schema: str, method: str, id_field: Union[str, list], cwd: str):
+    def __init__(
+        self,
+        df: DataFrame,
+        name: str,
+        schema: str,
+        method: str,
+        id_field: Union[str, list],
+        cwd: str,
+    ):
         self.df = df
         self.name = name
         self.schema = schema
