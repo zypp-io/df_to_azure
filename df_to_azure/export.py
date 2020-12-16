@@ -240,7 +240,7 @@ def convert_timedelta_to_seconds(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def column_types(df: pd.DataFrame, text_length: int = 100, decimal_precision: int = 2) -> dict:
+def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: int = 2) -> dict:
     """
     Convert pandas / numpy dtypes to SQLAlchemy dtypes when writing data to database.
 

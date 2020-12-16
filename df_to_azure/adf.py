@@ -70,7 +70,7 @@ def create_blob_service_client():
     connect_str = "DefaultEndpointsProtocol=https;AccountName={};AccountKey={}".format(
         os.environ.get("ls_blob_account_name"), os.environ.get("ls_blob_account_key")
     )
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str, timeout=600)
 
     return blob_service_client
 
