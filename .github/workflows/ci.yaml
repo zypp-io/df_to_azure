@@ -23,7 +23,7 @@ jobs:
     - name: Lint with flake8
       run: |
          # exit-zero treats all errors as warnings.
-         flake8 df_to_azure --count --max-complexity=10 --max-line-length=100 --statistics
+         flake8 df_to_azure --count --ignore=E722 --max-complexity=10 --max-line-length=100 --statistics
     - name: Test with pytest
       run: |
         # pytest

@@ -15,7 +15,9 @@ class SqlUpsert:
         return on
 
     def create_update_statement(self):
-        update = ", ".join([f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols])
+        update = ", ".join(
+            [f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols]
+        )
         return update
 
     def create_insert_statement(self):
@@ -30,14 +32,14 @@ class SqlUpsert:
         insert = self.create_insert_statement()
         query = f"""
         CREATE PROCEDURE [UPSERT_{self.table_name}]
-        AS 
-        MERGE {self.schema}.{self.table_name} t 
+        AS
+        MERGE {self.schema}.{self.table_name} t
             USING staging.{self.table_name} s
         ON {self.create_on_statement()}
         WHEN MATCHED
-            THEN UPDATE SET 
+            THEN UPDATE SET
                 {self.create_update_statement()}
-        WHEN NOT MATCHED BY TARGET 
+        WHEN NOT MATCHED BY TARGET
             THEN INSERT {insert[0]}
                  VALUES {insert[1]};
         """

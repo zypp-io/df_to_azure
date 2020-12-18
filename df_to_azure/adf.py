@@ -17,7 +17,6 @@ from azure.mgmt.datafactory.models import (
     SqlSink,
     SqlServerStoredProcedureActivity,
     DependencyCondition,
-    LinkedServiceReference,
 )
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.common.credentials import ServicePrincipalCredentials
@@ -70,8 +69,10 @@ def create_datafactory():
 
 
 def create_blob_service_client():
-    connect_str = f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}" \
-                  f";AccountKey={os.environ.get('ls_blob_account_key')}"
+    connect_str = (
+        f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
+        f";AccountKey={os.environ.get('ls_blob_account_key')}"
+    )
     blob_service_client = BlobServiceClient.from_connection_string(connect_str, timeout=600)
 
     return blob_service_client
@@ -231,14 +232,16 @@ def create_multiple_activity_pipeline(tables):
 
 def stored_procedure_activity(table_name):
     dependency_condition = DependencyCondition("Succeeded")
-    dependency = ActivityDependency(activity=f"Copy {table_name} to SQL", dependency_conditions=[dependency_condition])
+    dependency = ActivityDependency(
+        activity=f"Copy {table_name} to SQL", dependency_conditions=[dependency_condition]
+    )
     linked_service_reference = LinkedServiceReference(reference_name=os.environ.get("ls_sql_name"))
     activity = SqlServerStoredProcedureActivity(
         stored_procedure_name=f"UPSERT_{table_name}",
-        name="stored_procedure",
-        description="link to stored procedure in SQL DB",
+        name="UPSERT procedure",
+        description="Trigger UPSERT procedure in SQL",
         depends_on=[dependency],
-        linked_service_name=linked_service_reference
+        linked_service_name=linked_service_reference,
     )
 
     return activity

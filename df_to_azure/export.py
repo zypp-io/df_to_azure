@@ -82,7 +82,12 @@ def upload_dataset(table):
     if table.method == "create":
         push_to_azure(table)
     if table.method == "upsert":
-        upsert = SqlUpsert(table_name=table.name, schema=table.schema, id_cols=table.id_field, columns=table.df.columns)
+        upsert = SqlUpsert(
+            table_name=table.name,
+            schema=table.schema,
+            id_cols=table.id_field,
+            columns=table.df.columns,
+        )
         upsert.create_stored_procedure()
         table.schema = "staging"
         create_schema(table)
