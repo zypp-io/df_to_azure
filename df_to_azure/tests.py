@@ -2,12 +2,13 @@ from df_to_azure.export import run, run_multiple
 import pandas as pd
 import os
 from dotenv import load_dotenv
+import logging
 
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
 
 
-def test_create():
-
+def test_create_1():
     run(
         df=pd.read_csv("../data/sample_1.csv"),
         tablename="sample",
@@ -17,14 +18,33 @@ def test_create():
     )
 
 
-def test_upsert():
+def test_create_2():
+    run(
+        df=pd.read_csv("../data/category_1.csv"),
+        tablename="category",
+        schema="test",
+        method="create",
+        id_field="category_id",
+    )
 
+
+def test_upsert_1():
     run(
         df=pd.read_csv("../data/sample_2.csv"),
         tablename="sample",
         schema="test",
         method="upsert",
         id_field="col_a",
+    )
+
+
+def test_upsert_2():
+    run(
+        df=pd.read_csv("../data/category_2.csv"),
+        tablename="category",
+        schema="test",
+        method="upsert",
+        id_field="category_id",
     )
 
 
@@ -39,6 +59,6 @@ def test_run_multiple():
 
 
 if __name__ == "__main__":
-    test_create()
-    test_upsert()
-    test_run_multiple()
+    # test_create_2()
+    test_upsert_2()
+    # test_run_multiple()

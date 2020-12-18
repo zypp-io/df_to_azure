@@ -1,13 +1,12 @@
-from sqlalchemy import create_engine
 import pandas as pd
 from numpy import dtype
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 import os
 import logging
-from df_to_azure.exceptions import CreateSchemaError
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
+from df_to_azure.db import SqlUpsert, auth_azure
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
@@ -83,16 +82,25 @@ def upload_dataset(table):
     if table.method == "create":
         push_to_azure(table)
     if table.method == "upsert":
-        delete_current_records(table)
+        upsert = SqlUpsert(table_name=table.name, schema=table.schema, id_cols=table.id_field, columns=table.df.columns)
+        upsert.create_stored_procedure()
+        table.schema = "staging"
+        create_schema(table)
+        push_to_azure(table)
 
     upload_to_blob(table)
-    logging.info("Finished.number of transactions:{}".format(len(table.df)))
+    logging.info(f"Finished.number of transactions:{len(table.df)}")
 
 
 def push_to_azure(table):
     con = auth_azure()
     table.df = convert_timedelta_to_seconds(table.df)
     col_types = column_types(table.df)
+    # If we do an upsert, we always want to use schema 'staging'.
+    # if table.method == "upsert":
+    #     schema = "staging"
+    # else:
+    #     schema = table.schema
     table.df.head(n=0).to_sql(
         name=table.name,
         con=con,
@@ -107,20 +115,6 @@ def push_to_azure(table):
         f"records pushed to Microsoft Azure ({table.df.shape[1]} columns)",
     )
     logging.info(result)
-
-
-def auth_azure():
-
-    connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-        os.environ.get("SQL_USER"),
-        os.environ.get("SQL_PW"),
-        os.environ.get("SQL_SERVER"),
-        os.environ.get("SQL_DB"),
-        "ODBC Driver 17 for SQL Server",
-    )
-    con = create_engine(connection_string).connect()
-
-    return con
 
 
 def upload_to_blob(table):
@@ -142,10 +136,14 @@ def upload_to_blob(table):
 
 
 def create_schema(table):
-    try:
-        execute_stmt(stmt=f"create schema {table.schema}")
-    except CreateSchemaError:
-        logging.info(f"CreateSchemaError: did not create schema {table.schema}")
+
+    query = f"""
+    IF NOT EXISTS ( SELECT  *
+                FROM    sys.schemas
+                WHERE   name = N'{table.schema}' )
+    EXEC('CREATE SCHEMA [{table.schema}]');
+    """
+    execute_stmt(query)
 
 
 def execute_stmt(stmt):
@@ -153,12 +151,10 @@ def execute_stmt(stmt):
     :param stmt: SQL statement to be executed
     :return: executes the statment
     """
-    con = auth_azure()
-
-    with con as conn:
-        rs = conn.execute(stmt)
-
-    return rs
+    with auth_azure() as con:
+        t = con.begin()
+        con.execute(stmt)
+        t.commit()
 
 
 def delete_current_records(table):
