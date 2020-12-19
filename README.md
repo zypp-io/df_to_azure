@@ -18,9 +18,9 @@ In steps the following process kicks off:<p>
 Based on the following attributes, it is possible to bulk insert your dataframe into the SQL Database:
 
 ```python
-from df_to_azure.export import run
+from df_to_azure import df_to_azure
 
-run(df=df, tablename="table_name", schema="schema", method="create", id_field="col_a")
+df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_field="col_a")
 ```
 
 1. `df`: dataframe you wish to export

@@ -1,4 +1,4 @@
-from df_to_azure.export import run, run_multiple
+from df_to_azure import df_to_azure, dfs_to_azure
 import pandas as pd
 import os
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ load_dotenv(verbose=True, override=True)
 
 
 def test_create_1():
-    run(
+    df_to_azure(
         df=pd.read_csv("../data/sample_1.csv"),
         tablename="sample",
         schema="test",
@@ -19,7 +19,7 @@ def test_create_1():
 
 
 def test_create_2():
-    run(
+    df_to_azure(
         df=pd.read_csv("../data/category_1.csv"),
         tablename="category",
         schema="test",
@@ -29,7 +29,7 @@ def test_create_2():
 
 
 def test_upsert_1():
-    run(
+    df_to_azure(
         df=pd.read_csv("../data/sample_2.csv"),
         tablename="sample",
         schema="test",
@@ -39,7 +39,7 @@ def test_upsert_1():
 
 
 def test_upsert_2():
-    run(
+    df_to_azure(
         df=pd.read_csv("../data/category_2.csv"),
         tablename="category",
         schema="test",
@@ -55,10 +55,10 @@ def test_run_multiple():
         if file.endswith(".csv"):
             df_dict[file.split(".csv")[0]] = pd.read_csv(os.path.join("data", file))
 
-    run_multiple(df_dict, schema="test", method="create")
+    dfs_to_azure(df_dict, schema="test", method="create")
 
 
 if __name__ == "__main__":
-    # test_create_2()
-    test_upsert_2()
+    test_create_2()
+    # test_upsert_2()
     # test_run_multiple()
