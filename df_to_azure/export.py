@@ -12,7 +12,6 @@ from df_to_azure.db import SqlUpsert, auth_azure
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
     tables = []
     for name, df in df_dict.items():
-
         table = TableParameters(
             df=df, name=name, schema=schema, method=method, id_field=id_field, cwd=cwd
         )
@@ -101,11 +100,6 @@ def push_to_azure(table):
     con = auth_azure()
     table.df = convert_timedelta_to_seconds(table.df)
     col_types = column_types(table.df)
-    # If we do an upsert, we always want to use schema 'staging'.
-    # if table.method == "upsert":
-    #     schema = "staging"
-    # else:
-    #     schema = table.schema
     table.df.head(n=0).to_sql(
         name=table.name,
         con=con,
@@ -141,7 +135,6 @@ def upload_to_blob(table):
 
 
 def create_schema(table):
-
     query = f"""
     IF NOT EXISTS ( SELECT  *
                 FROM    sys.schemas
