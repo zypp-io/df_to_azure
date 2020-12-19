@@ -1,10 +1,10 @@
-<img src="https://static.wixstatic.com/media/a9ca5e_825bd4d39e7d468faf735b801fa3dea4~mv2.png/v1/fill/w_1458,h_246,al_c,usm_0.66_1.00_0.01/a9ca5e_825bd4d39e7d468faf735b801fa3dea4~mv2.png" width="200">
+<p align="center"><img alt="logo" src="https://www.zypp.io/static/assets/img/logos/Main logo - White/Zypp - White - JPG.jpg" width="200"></p>
 
-# Azure ADF
+# DF to Azure
 
-> Repository for Automatically creating pipelines with copy Activity from blob to SQL
+> Python module for fast upload of pandas DataFrame to azure using automatic created pipelines in Azure Data Factory.
 
-## introduction
+## Introduction
 
 The purpose of this project is to upload large datasets using Azure Data Factory combined with a Azure SQL Server. 
 In steps the following process kicks off:<p>
@@ -15,29 +15,35 @@ In steps the following process kicks off:<p>
 
 ## How it works
 
-based on the following attributes, it is possible to bulk insert your dataframe into the SQL Database:
+Based on the following attributes, it is possible to bulk insert your dataframe into the SQL Database:
 
-`run(df, tablename, schema, incremental=True, id_field="col_a")`
+```python
+from df_to_azure.export import run
 
-        1. df: dataframe you wish to export
-        2. tablename: desired name of the table 
-        3. schema: desired sql schema
-        4. method:option for "create" "append" or "upsert"
-        5. id_field: id field of the table. necessary if 4 is set to True
+run(df=df, tablename="table_name", schema="schema", method="create", id_field="col_a")
+```
 
-##### upsert / create or append
-it is possible to upsert the SQL table with (new) records, if present in the dataframe you want to upload.<br>
-Based on the id_field, the SQL table is being checked on overlapping values.<br>
-If there are new records, the "old" records will be deleted in the SQL table. <br>
+1. `df`: dataframe you wish to export
+2. `tablename`: desired name of the table 
+3. `schema`: desired sql schema
+4. `method`: option for "create" "append" or "upsert"
+5. `id_field`: id field of the table. Necessary if 4 is set to True
+
+##### Upsert / create or append
+It is possible to upsert the SQL table with (new) records, if present in the dataframe you want to upload.
+Based on the id_field, the SQL table is being checked on overlapping values.
+If there are new records, the "old" records will be updated in the SQL table.
 The new records will be uploaded and appended to the current SQL table.
 
 # Settings
-To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your YAML file.
-Use the following template:
-```yaml
+To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your environment variables.
+We recommend to work with `.env` files and load them in during runtime. But this is optional and they can be set as system variables as well.
+Use the following template when using `.env`
+
+```text
 # --- ADF SETTINGS ---
 # general run settings
-create : False
+create="False"
 
 # data factory settings
 rg_name : ""
@@ -68,9 +74,6 @@ tenant : ""
 subscription_id : ""
 ```
 
-Place this YAML file somewhere on your laptop. Then add the path to your environment in the variable `DF_TO_AZURE_SETTINGS`. 
-For example `DF_TO_AZURE_SETTINGS='/Users/myname/settings.yml'`
-The script will use `os.environ.get('DF_TO_AZURE_SETTINGS')` to import the settings in the YAML file.
-
-## Maintainers:
+## Maintained by Zypp:
 - [Melvin Folkers](https://github.com/melvinfolkers)
+- [Erfan Nariman](https://github.com/erfannariman)
