@@ -45,7 +45,9 @@ def run_multiple(df_dict, schema, method="create", id_field=None, cwd=None):
         adf.create_output_sql(table)
 
     # pipelines
-    adf.create_multiple_activity_pipeline(tables)
+    adf_client, run_response = adf.create_multiple_activity_pipeline(tables)
+
+    return adf_client, run_response
 
 
 def run(df, tablename, schema, method="create", id_field=None, cwd=None):
@@ -70,7 +72,9 @@ def run(df, tablename, schema, method="create", id_field=None, cwd=None):
     adf.create_output_sql(table)
 
     # pipelines
-    adf.create_pipeline(table)
+    adf_client, run_response = adf.create_pipeline(table)
+
+    return adf_client, run_response
 
 
 def upload_dataset(table):

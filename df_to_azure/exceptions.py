@@ -4,3 +4,8 @@ class CreateSchemaError(Exception):
 
 class CreateContainerError(Exception):
     pass
+
+
+class PipelineRunError(Exception):
+    """Error when ADF pipleine fails"""
+    pass

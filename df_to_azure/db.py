@@ -1,5 +1,5 @@
 import os
-
+import logging
 from sqlalchemy import create_engine
 
 
@@ -43,6 +43,7 @@ class SqlUpsert:
             THEN INSERT {insert[0]}
                  VALUES {insert[1]};
         """
+        logging.info(query)
 
         return query
 
