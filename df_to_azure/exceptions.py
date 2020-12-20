@@ -8,4 +8,5 @@ class CreateContainerError(Exception):
 
 class PipelineRunError(Exception):
     """Error when ADF pipleine fails"""
+
     pass

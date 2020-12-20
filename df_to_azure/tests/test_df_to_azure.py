@@ -17,8 +17,10 @@ This is the testing suite for df_to_azure. In general the following steps will b
 
 1. Read a sample csv file from repo or the web
 2. Write file to DB with df_to_azure, this can be create or upsert.
-3. Use `wait_till_pipeline_is_done` function to wait for ADF pipeline to be Succeeded before continuing.
-4. Read data back from DB and test if we got expected output with pandas._testing.assert_frame_equal.
+3. Use `wait_till_pipeline_is_done` function to wait for ADF pipeline
+     to be Succeeded before continuing.
+4. Read data back from DB and test if we got expected output
+     with pandas._testing.assert_frame_equal.
 """
 
 
@@ -90,11 +92,13 @@ def test_upsert_sample(file_dir="data"):
     )
     wait_till_pipeline_is_done(adf_client, run_response)
 
-    expected = pd.DataFrame({
-        "col_a": [1, 3, 4, 5, 6],
-        "col_b": ["updated value", "test", "test", "new value", "also new"],
-        "col_c": ["E", "Z", "A", "F", "H"]
-    })
+    expected = pd.DataFrame(
+        {
+            "col_a": [1, 3, 4, 5, 6],
+            "col_b": ["updated value", "test", "test", "new value", "also new"],
+            "col_c": ["E", "Z", "A", "F", "H"],
+        }
+    )
 
     with auth_azure() as con:
         result = pd.read_sql_table(table_name="sample", con=con, schema="test")
@@ -113,11 +117,20 @@ def test_upsert_category(file_dir="data"):
     )
     wait_till_pipeline_is_done(adf_client, run_response)
 
-    expected = pd.DataFrame({
-        "category_id": [1, 2, 3, 4, 5, 6],
-        "category_name": ["Children Bicycles", "Comfort Bicycles", "Cruisers Bicycles", "Cyclocross Bicycles", "Electric Bikes", "Mountain Bikes"],
-        "amount": [15000, 25000, 13000, 20000, 10000, 10000]
-    })
+    expected = pd.DataFrame(
+        {
+            "category_id": [1, 2, 3, 4, 5, 6],
+            "category_name": [
+                "Children Bicycles",
+                "Comfort Bicycles",
+                "Cruisers Bicycles",
+                "Cyclocross Bicycles",
+                "Electric Bikes",
+                "Mountain Bikes",
+            ],
+            "amount": [15000, 25000, 13000, 20000, 10000, 10000],
+        }
+    )
 
     with auth_azure() as con:
         result = pd.read_sql_table(table_name="category", con=con, schema="test")
@@ -127,13 +140,15 @@ def test_upsert_category(file_dir="data"):
 
 def test_upsert_id_field_multiple_columns():
     # create table in database first
-    df = pd.read_csv("https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv", sep=";")
+    df = pd.read_csv(
+        "https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv", sep=";"
+    )
     df_to_azure(
         df=df,
         tablename="covid_19",
         schema="test",
         method="create",
-        id_field=["Date_of_report", "Municipality_code"]
+        id_field=["Date_of_report", "Municipality_code"],
     )
 
     # change data to test upsert
@@ -144,7 +159,7 @@ def test_upsert_id_field_multiple_columns():
         tablename="covid_19",
         schema="test",
         method="upsert",
-        id_field=["Date_of_report", "Municipality_code"]
+        id_field=["Date_of_report", "Municipality_code"],
     )
     wait_till_pipeline_is_done(adf_client, run_response)
 
