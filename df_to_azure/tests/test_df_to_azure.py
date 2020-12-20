@@ -22,7 +22,7 @@ This is the testing suite for df_to_azure. In general the following steps will b
      to be Succeeded before continuing.
 4. Read data back from DB and test if we got expected output
      with pandas._testing.assert_frame_equal.
-     
+
 NOTE: To keep the testing lightweight, we don't import whole modules but just the methods we need.
         like DataFrame from pandas.
 """
@@ -50,7 +50,7 @@ def wait_till_pipeline_is_done(adf_client, run_response):
 # ---- CREATE TESTS ----
 def test_create_sample(file_dir="data"):
     file_dir = file_dir + "/sample_1.csv"
-    expected = pd.read_csv(file_dir)
+    expected = read_csv(file_dir)
     adf_client, run_response = df_to_azure(
         df=expected,
         tablename="sample",
@@ -113,7 +113,7 @@ def test_upsert_sample(file_dir="data"):
 def test_upsert_category(file_dir="data"):
     file_dir = file_dir + "/category_2.csv"
     adf_client, run_response = df_to_azure(
-        df=pd.read_csv(file_dir),
+        df=read_csv(file_dir),
         tablename="category",
         schema="test",
         method="upsert",
@@ -191,6 +191,8 @@ def test_mapping_column_types():
     Test if the mapping of the pandas column types to SQL column types goes correctly.
     """
 
+    dr1 = date_range("2020-01-01", periods=3, freq="D")
+    dr2 = date_range("2019-06-23", periods=3, freq="D")
     df = DataFrame(
         {
             "String": list("abc"),
@@ -200,31 +202,56 @@ def test_mapping_column_types():
             "pd_Int64": Series([1, 2, 3], dtype="Int64"),
             "Float": [4.0, 5.0, 6.0],
             "Float32": array([4, 4, 6], dtype="float32"),
-            "Date": date_range("2020-01-01", periods=3, freq="D"),
-            "Timedelta": date_range("2020-01-01", periods=3, freq="D")
-            - date_range("2019-06-23", periods=3, freq="D"),
+            "Date": dr1,
+            "Timedelta": dr1 - dr2,
             "Bool": [True, False, True],
         }
     )
-    adf_client, run_response = df_to_azure(df, tablename="test_df_to_azure", schema="test", method="create")
+    adf_client, run_response = df_to_azure(
+        df, tablename="test_df_to_azure", schema="test", method="create"
+    )
     wait_till_pipeline_is_done(adf_client, run_response)
 
-    expected = DataFrame({
-        "COLUMN_NAME": ["String", "pd_String", "Int", "Int16", "pd_Int64", "Float", "Float32", "Date", "Timedelta", "Bool"],
-        "DATA_TYPE": ["varchar", "varchar", "int", "int", "int", "real", "real", "datetime", "real", "bit"],
-        "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan],
-        "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 24, 24, nan, 24, nan]
-    })
+    expected = DataFrame(
+        {
+            "COLUMN_NAME": [
+                "String",
+                "pd_String",
+                "Int",
+                "Int16",
+                "pd_Int64",
+                "Float",
+                "Float32",
+                "Date",
+                "Timedelta",
+                "Bool",
+            ],
+            "DATA_TYPE": [
+                "varchar",
+                "varchar",
+                "int",
+                "int",
+                "int",
+                "real",
+                "real",
+                "datetime",
+                "real",
+                "bit",
+            ],
+            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 24, 24, nan, 24, nan],
+        }
+    )
 
     query = """
-    SELECT 
-        COLUMN_NAME, 
-        DATA_TYPE, 
-        CHARACTER_MAXIMUM_LENGTH, 
+    SELECT
+        COLUMN_NAME,
+        DATA_TYPE,
+        CHARACTER_MAXIMUM_LENGTH,
         NUMERIC_PRECISION
-    FROM 
+    FROM
         INFORMATION_SCHEMA.COLUMNS
-    WHERE 
+    WHERE
         TABLE_NAME = 'test_df_to_azure';
     """
 
