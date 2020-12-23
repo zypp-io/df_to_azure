@@ -2,7 +2,6 @@ from sqlalchemy import create_engine
 import pandas as pd
 import os
 import logging
-from df_to_azure.exceptions import CreateSchemaError
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
@@ -151,10 +150,13 @@ def upload_to_blob(table):
 
 
 def create_schema(table):
-    try:
-        execute_stmt(stmt=f"create schema {table.schema}")
-    except CreateSchemaError:
-        logging.info(f"CreateSchemaError: did not create schema {table.schema}")
+    query = f"""
+    IF NOT EXISTS ( SELECT  *
+                FROM    sys.schemas
+                WHERE   name = N'{table.schema}' )
+    EXEC('CREATE SCHEMA [{table.schema}]');
+    """
+    execute_stmt(query)
 
 
 def execute_stmt(stmt):
