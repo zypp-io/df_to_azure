@@ -2,7 +2,6 @@ from sqlalchemy import create_engine
 import pandas as pd
 import os
 import logging
-from df_to_azure.exceptions import CreateSchemaError
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
