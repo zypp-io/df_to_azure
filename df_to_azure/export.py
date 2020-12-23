@@ -151,10 +151,13 @@ def upload_to_blob(table):
 
 
 def create_schema(table):
-    try:
-        execute_stmt(stmt=f"create schema {table.schema}")
-    except CreateSchemaError:
-        logging.info(f"CreateSchemaError: did not create schema {table.schema}")
+    query = f"""
+    IF NOT EXISTS ( SELECT  *
+                FROM    sys.schemas
+                WHERE   name = N'{table.schema}' )
+    EXEC('CREATE SCHEMA [{table.schema}]');
+    """
+    execute_stmt(query)
 
 
 def execute_stmt(stmt):
