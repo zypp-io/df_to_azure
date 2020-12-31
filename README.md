@@ -77,3 +77,18 @@ subscription_id : ""
 ## Maintained by Zypp:
 - [Melvin Folkers](https://github.com/melvinfolkers)
 - [Erfan Nariman](https://github.com/erfannariman)
+
+---
+
+## Testing
+
+To run the test suite, use:
+
+```commandline
+pytest df_to_azure
+```
+
+To run pytest for a single test:
+```commandline
+pytest df_to_azure/tests/test_df_to_azure::test_duplicate_keys_upsert
+```
