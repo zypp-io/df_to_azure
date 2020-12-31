@@ -1,8 +1,8 @@
 import logging
 import os
 from df_to_azure.functions import print_item
-from df_to_azure.exceptions import CreateContainerError
 from azure.mgmt.datafactory.models import (
+    ActivityDependency,
     Factory,
     SecureString,
     AzureSqlDatabaseLinkedService,
@@ -15,6 +15,8 @@ from azure.mgmt.datafactory.models import (
     AzureSqlTableDataset,
     CopyActivity,
     SqlSink,
+    SqlServerStoredProcedureActivity,
+    DependencyCondition,
 )
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.common.credentials import ServicePrincipalCredentials
@@ -22,31 +24,31 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
 
-def create_adf_client():
+def create_service_principal_credentials():
     credentials = ServicePrincipalCredentials(
         client_id=os.environ.get("client_id"),
         secret=os.environ.get("secret"),
         tenant=os.environ.get("tenant"),
     )
 
+    return credentials
+
+
+def create_adf_client():
+    credentials = create_service_principal_credentials()
     adf_client = DataFactoryManagementClient(credentials, os.environ.get("subscription_id"))
 
     return adf_client
 
 
 def create_resource_client():
-    credentials = ServicePrincipalCredentials(
-        client_id=os.environ.get("client_id"),
-        secret=os.environ.get("secret"),
-        tenant=os.environ.get("tenant"),
-    )
+    credentials = create_service_principal_credentials()
     resource_client = ResourceManagementClient(credentials, os.environ.get("subscription_id"))
 
     return resource_client
 
 
 def create_resourcegroup():
-
     resource_client = create_resource_client()
     rg_params = {"location": os.environ.get("rg_location")}
     rg = resource_client.resource_groups.create_or_update(os.environ.get("rg_name"), rg_params)
@@ -54,7 +56,6 @@ def create_resourcegroup():
 
 
 def create_datafactory():
-
     df_resource = Factory(location=os.environ.get("rg_location"))
     adf_client = create_adf_client()
     df = adf_client.factories.create_or_update(
@@ -68,10 +69,11 @@ def create_datafactory():
 
 
 def create_blob_service_client():
-    connect_str = "DefaultEndpointsProtocol=https;AccountName={};AccountKey={}".format(
-        os.environ.get("ls_blob_account_name"), os.environ.get("ls_blob_account_key")
+    connect_str = (
+        f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
+        f";AccountKey={os.environ.get('ls_blob_account_key')}"
     )
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str, timeout=600)
 
     return blob_service_client
 
@@ -80,13 +82,13 @@ def create_blob_container():
     blob_service_client = create_blob_service_client()
     try:
         blob_service_client.create_container(os.environ.get("ls_blob_container_name"))
-    except CreateContainerError:
+    except:
         logging.info("CreateContainerError: Container already exists.")
 
 
 def create_linked_service_sql():
     conn_string = SecureString(
-        value=f"integrated security=False;encrypt=True;connection timeout=30;data "
+        value=f"integrated security=False;encrypt=True;connection timeout=600;data "
         f"source={os.environ.get('ls_sql_server_name')}"
         f";initial catalog={os.environ.get('ls_sql_database_name')}"
         f";user id={os.environ.get('ls_sql_database_user')}"
@@ -160,23 +162,28 @@ def create_output_sql(table):
 
 def create_pipeline(table):
 
-    copy_activity = create_copy_activity(table)
-
+    activities = [create_copy_activity(table)]
+    # If user wants to upsert, we append stored procedure activity to pipeline.
+    if table.method == "upsert":
+        activities.append(stored_procedure_activity(table.name))
     # Create a pipeline with the copy activity
     p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} {table.name} to SQL"
     params_for_pipeline = {}
-    p_obj = PipelineResource(activities=[copy_activity], parameters=params_for_pipeline)
+    p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
     adf_client.pipelines.create_or_update(
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
     trigger = True if os.environ.get("trigger") == "True" else False
+    run_response = None
     if trigger:
         logging.info(f"triggering pipeline run for {table.name}!")
-        adf_client.pipelines.create_run(
+        run_response = adf_client.pipelines.create_run(
             os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
         )
+
+    return adf_client, run_response
 
 
 def create_copy_activity(table):
@@ -217,10 +224,30 @@ def create_multiple_activity_pipeline(tables):
     )
 
     trigger = True if os.environ.get("trigger") == "True" else False
+    run_response = None
     if trigger:
         logging.info(
             f"triggering pipeline run for {os.environ.get('ls_blob_container_name').capitalize()}!"
         )
-        adf_client.pipelines.create_run(
+        run_response = adf_client.pipelines.create_run(
             os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
         )
+
+    return adf_client, run_response
+
+
+def stored_procedure_activity(table_name):
+    dependency_condition = DependencyCondition("Succeeded")
+    dependency = ActivityDependency(
+        activity=f"Copy {table_name} to SQL", dependency_conditions=[dependency_condition]
+    )
+    linked_service_reference = LinkedServiceReference(reference_name=os.environ.get("ls_sql_name"))
+    activity = SqlServerStoredProcedureActivity(
+        stored_procedure_name=f"UPSERT_{table_name}",
+        name="UPSERT procedure",
+        description="Trigger UPSERT procedure in SQL",
+        depends_on=[dependency],
+        linked_service_name=linked_service_reference,
+    )
+
+    return activity

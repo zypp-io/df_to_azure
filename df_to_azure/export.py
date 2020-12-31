@@ -1,16 +1,17 @@
-from sqlalchemy import create_engine
 import pandas as pd
+from numpy import dtype
+from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 import os
 import logging
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
+from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
     tables = []
     for name, df in df_dict.items():
-
         table = TableParameters(
             df=df, name=name, schema=schema, method=method, id_field=id_field, cwd=cwd
         )
@@ -44,7 +45,9 @@ def run_multiple(df_dict, schema, method="create", id_field=None, cwd=None):
         adf.create_output_sql(table)
 
     # pipelines
-    adf.create_multiple_activity_pipeline(tables)
+    adf_client, run_response = adf.create_multiple_activity_pipeline(tables)
+
+    return adf_client, run_response
 
 
 def run(df, tablename, schema, method="create", id_field=None, cwd=None):
@@ -69,7 +72,9 @@ def run(df, tablename, schema, method="create", id_field=None, cwd=None):
     adf.create_output_sql(table)
 
     # pipelines
-    adf.create_pipeline(table)
+    adf_client, run_response = adf.create_pipeline(table)
+
+    return adf_client, run_response
 
 
 def upload_dataset(table):
@@ -80,21 +85,34 @@ def upload_dataset(table):
     if table.method == "create":
         push_to_azure(table)
     if table.method == "upsert":
-        delete_current_records(table)
+        # key columns have to be unique for upsert.
+        test_uniqueness_columns(table.df, table.id_field)
+        upsert = SqlUpsert(
+            table_name=table.name,
+            schema=table.schema,
+            id_cols=table.id_field,
+            columns=table.df.columns,
+        )
+        upsert.create_stored_procedure()
+        table.schema = "staging"
+        create_schema(table)
+        push_to_azure(table)
 
     upload_to_blob(table)
-    logging.info("Finished.number of transactions:{}".format(len(table.df)))
+    logging.info(f"Finished.number of transactions:{len(table.df)}")
 
 
 def push_to_azure(table):
-    connection_string = auth_azure()
-    engine = create_engine(connection_string, pool_size=10, max_overflow=20)
+    con = auth_azure()
+    table.df = convert_timedelta_to_seconds(table.df)
+    col_types = column_types(table.df)
     table.df.head(n=0).to_sql(
-        table.name,
-        engine,
+        name=table.name,
+        con=con,
         if_exists="replace",
         index=False,
         schema=table.schema,
+        dtype=col_types,
     )
     result = (
         f"push successful ({table.name}):",
@@ -102,19 +120,6 @@ def push_to_azure(table):
         f"records pushed to Microsoft Azure ({table.df.shape[1]} columns)",
     )
     logging.info(result)
-
-
-def auth_azure():
-
-    connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-        os.environ.get("ls_sql_database_user"),
-        os.environ.get("ls_sql_database_password"),
-        os.environ.get("ls_sql_server_name"),
-        os.environ.get("ls_sql_database_name"),
-        "ODBC Driver 17 for SQL Server",
-    )
-
-    return connection_string
 
 
 def upload_to_blob(table):
@@ -135,20 +140,6 @@ def upload_to_blob(table):
     logging.info(f"finished uploading blob {table.name}!")
 
 
-# TODO: create download_blob method
-# def download_blob(table):
-#     blob_client = create_blob_service_client()
-#     blob_list = blob_client.list_blobs()
-#     blob_client = blob_client.get_blob_client(
-#         container=table.azure["ls_blob_container_name"],
-#         blob=f"{table.name}/{table.name}",
-#     )
-#     download_file_path = os.path.join(local_path, filename.split('/')[-1:][0])
-#
-#     with open(download_file_path, "wb") as download_file:
-#         download_file.write(blob_client.download_blob().readall())
-
-
 def create_schema(table):
     query = f"""
     IF NOT EXISTS ( SELECT  *
@@ -164,13 +155,10 @@ def execute_stmt(stmt):
     :param stmt: SQL statement to be executed
     :return: executes the statment
     """
-    conn = auth_azure()
-    engn = create_engine(conn)
-
-    with engn.connect() as con:
-        rs = con.execute(stmt)
-
-    return rs
+    with auth_azure() as con:
+        t = con.begin()
+        con.execute(stmt)
+        t.commit()
 
 
 def delete_current_records(table):
@@ -199,10 +187,9 @@ def get_overlapping_records(table):
     :param id_field: field to check if the values are already in the database
     :return:  a list of records that are overlapping
     """
-    conn = auth_azure()
-    engn = create_engine(conn)
+    con = auth_azure()
 
-    current_db = pd.read_sql_table(table.name, engn, schema=table.schema)
+    current_db = pd.read_sql_table(table_name=table.name, con=con, schema=table.schema)
     overlapping_records = current_db[current_db[table.id_field].isin(table.df[table.id_field])]
     del_list = overlapping_records.astype(str)[table.id_field].to_list()
 
@@ -228,3 +215,66 @@ def create_sql_delete_stmt(del_list, table):
     logging.info(f"{len(del_list)} run_id's in delete statement")
 
     return sql_stmt
+
+
+def convert_timedelta_to_seconds(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    We convert timedelta columns to seconds since this will error in SQL DB.
+    If there are no timedelta columns, nothing will happen.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to convert timedelta columns to seconds
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame where timedelta columns are converted to seconds.
+    """
+    td_cols = df.iloc[:1].select_dtypes("timedelta").columns
+
+    if len(td_cols):
+        df[td_cols] = df[td_cols].apply(lambda x: x.dt.total_seconds())
+
+    return df
+
+
+def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: int = 2) -> dict:
+    """
+    Convert pandas / numpy dtypes to SQLAlchemy dtypes when writing data to database.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        dataframe to write to SQL database
+    text_length: int
+        maximum length of text columns
+    decimal_precision: int
+        Decimal precision of float columns
+
+    Returns
+    -------
+    col_types: dict
+        Dictionary with mapping of pandas dtypes to SQLAlchemy types.
+    """
+    type_conversion = {
+        dtype("O"): String(length=text_length),
+        pd.StringDtype(): String(length=text_length),
+        dtype("int64"): Integer(),
+        dtype("int32"): Integer(),
+        dtype("int16"): Integer(),
+        dtype("int8"): Integer(),
+        pd.Int64Dtype(): Integer(),
+        dtype("float64"): Float(precision=decimal_precision),
+        dtype("float32"): Float(precision=decimal_precision),
+        dtype("float16"): Float(precision=decimal_precision),
+        dtype("<M8[ns]"): DateTime(),
+        dtype("bool"): Boolean(),
+    }
+
+    col_types = {
+        col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()
+    }
+
+    return col_types

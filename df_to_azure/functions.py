@@ -1,6 +1,5 @@
 import logging
 import os
-from df_to_azure.parse_settings import TableParameters
 import pandas as pd
 
 
@@ -26,7 +25,7 @@ def print_properties(props):
     """
     if props and hasattr(props, "provisioning_state") and props.provisioning_state:
         logging.info("\tProperties:")
-        logging.info("\t\tProvisioning State: {}".format(props.provisioning_state))
+        logging.info(f"\t\tProvisioning State: {props.provisioning_state}")
     logging.info("")
 
 
@@ -36,26 +35,13 @@ def print_activity_run_details(activity_run):
     :param activity_run: Azure activity
     """
     logging.info("\n\tActivity run details\n")
-    logging.info("\tActivity run status: {}".format(activity_run.status))
+    logging.info(f"\tActivity run status: {activity_run.status}")
     if activity_run.status == "Succeeded":
-        logging.info("\tNumber of bytes read: {}".format(activity_run.output["dataRead"]))
-        logging.info("\tNumber of bytes written: {}".format(activity_run.output["dataWritten"]))
-        logging.info("\tCopy duration: {}".format(activity_run.output["copyDuration"]))
+        logging.info(f"\tNumber of bytes read: {activity_run.output['dataRead']}")
+        logging.info(f"\tNumber of bytes written: {activity_run.output['dataWritten']}")
+        logging.info(f"\tCopy duration: {activity_run.output['copyDuration']}")
     else:
-        logging.info("\tErrors: {}".format(activity_run.error["message"]))
-
-
-def print_settings() -> None:
-    """
-    :return:
-    """
-
-    settings = TableParameters.get_settings(os.environ.get("DF_TO_AZURE_SETTINGS"))
-
-    logging.info(10 * "*" + "\nAZURE & ADF SETTINGS\n" + 10 * "*")
-    for k, v in settings.items():
-        logging.info(k + " = " + v)
-    logging.info(34 * "*" + "\n")
+        logging.info(f"\tErrors: {activity_run.error['message']}")
 
 
 def cat_modules(directory, tablename):
