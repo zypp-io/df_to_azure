@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import pytest
 from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query
 from numpy import array, nan
 from pandas._testing import assert_frame_equal
@@ -47,9 +48,11 @@ def wait_till_pipeline_is_done(adf_client, run_response):
             raise PipelineRunError("Pipeline failed")
 
 
-# ---- CREATE TESTS ----
+# #############################
+# #### CREATE METHOD TESTS ####
+# #############################
 def test_create_sample(file_dir="data"):
-    file_dir = file_dir + "/sample_1.csv"
+    file_dir = os.path.join(file_dir, "sample_1.csv")
     expected = read_csv(file_dir)
     adf_client, run_response = df_to_azure(
         df=expected,
@@ -67,7 +70,7 @@ def test_create_sample(file_dir="data"):
 
 
 def test_create_category(file_dir="data"):
-    file_dir = file_dir + "/category_1.csv"
+    file_dir = os.path.join(file_dir, "category_1.csv")
     expected = read_csv(file_dir)
     adf_client, run_response = df_to_azure(
         df=expected,
@@ -84,9 +87,11 @@ def test_create_category(file_dir="data"):
     assert_frame_equal(expected, result)
 
 
-# ---- UPSERT TESTS ----
+# #############################
+# #### UPSERT METHOD TESTS ####
+# #############################
 def test_upsert_sample(file_dir="data"):
-    file_dir = file_dir + "/sample_2.csv"
+    file_dir = os.path.join(file_dir, "sample_2.csv")
     adf_client, run_response = df_to_azure(
         df=read_csv(file_dir),
         tablename="sample",
@@ -111,7 +116,7 @@ def test_upsert_sample(file_dir="data"):
 
 
 def test_upsert_category(file_dir="data"):
-    file_dir = file_dir + "/category_2.csv"
+    file_dir = os.path.join(file_dir, "category_2.csv")
     adf_client, run_response = df_to_azure(
         df=read_csv(file_dir),
         tablename="category",
@@ -132,7 +137,7 @@ def test_upsert_category(file_dir="data"):
                 "Electric Bikes",
                 "Mountain Bikes",
             ],
-            "amount": [15000, 25000, 13000, 20000, 10000, 10000],
+            "amount": [15000.00, 25000.00, 13000.00, 20000.00, 10000.00, 10000.00],
         }
     )
 
@@ -142,38 +147,63 @@ def test_upsert_category(file_dir="data"):
     assert_frame_equal(expected, result)
 
 
-def test_upsert_id_field_multiple_columns():
+def test_upsert_id_field_multiple_columns(file_dir="data"):
     # create table in database first
-    df = read_csv(
-        "https://data.rivm.nl/covid-19/COVID-19_aantallen_gemeente_cumulatief.csv", sep=";"
-    )
+    file_dir_1 = os.path.join(file_dir, "employee_1.csv")
+    df = read_csv(file_dir_1)
     df_to_azure(
         df=df,
-        tablename="covid_19",
+        tablename="employee_1",
         schema="test",
         method="create",
-        id_field=["Date_of_report", "Municipality_code"],
+        id_field=["employee_id", "week_nr"],
     )
 
-    # change data to test upsert
-    df = df.groupby("Municipality_code").sample(100).reset_index(drop=True)
-    df[["Total_reported", "Hospital_admission", "Deceased"]] = 999999
+    # upsert data
+    file_dir_2 = os.path.join(file_dir, "employee_2.csv")
+    df = read_csv(file_dir_2)
     adf_client, run_response = df_to_azure(
         df=df,
-        tablename="covid_19",
+        tablename="employee_1",
         schema="test",
         method="upsert",
-        id_field=["Date_of_report", "Municipality_code"],
+        id_field=["employee_id", "week_nr"],
     )
     wait_till_pipeline_is_done(adf_client, run_response)
 
     # read data back from upserted table in SQL
     with auth_azure() as con:
-        result = read_sql_table(table_name="covid_19", con=con, schema="test")
-
-    result = result[result["Total_reported"] == 999999].reset_index(drop=True)
+        result = read_sql_table(table_name="employee_1", con=con, schema="test")
 
     assert_frame_equal(df, result)
+
+
+def test_duplicate_keys_upsert(file_dir="data"):
+    file_dir_1 = os.path.join(file_dir, "employee_duplicate_keys_1.csv")
+    df = read_csv(file_dir_1)
+    df_to_azure(
+        df=df,
+        tablename="employee_duplicate_keys",
+        schema="test",
+        method="create",
+        id_field=["employee_id", "week_nr"],
+    )
+
+    # upsert data
+    file_dir_2 = os.path.join(file_dir, "employee_duplicate_keys_2.csv")
+    df = read_csv(file_dir_2)
+    with pytest.raises(Exception):
+        df_to_azure(
+            df=df,
+            tablename="employee_duplicate_keys",
+            schema="test",
+            method="upsert",
+            id_field=["employee_id", "week_nr"],
+        )
+
+# #######################
+# #### GENERAL TESTS ####
+# #######################
 
 
 def test_run_multiple(file_dir="data"):
@@ -267,5 +297,5 @@ if __name__ == "__main__":
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
-    # test_upsert_id_field_multiple_columns()
+    test_upsert_id_field_multiple_columns(file_dir_run)
     # test_run_multiple()

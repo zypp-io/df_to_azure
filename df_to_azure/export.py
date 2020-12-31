@@ -6,7 +6,7 @@ import logging
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
-from df_to_azure.db import SqlUpsert, auth_azure
+from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
@@ -85,6 +85,8 @@ def upload_dataset(table):
     if table.method == "create":
         push_to_azure(table)
     if table.method == "upsert":
+        # key columns have to be unique for upsert.
+        test_uniqueness_columns(table.df, table.id_field)
         upsert = SqlUpsert(
             table_name=table.name,
             schema=table.schema,

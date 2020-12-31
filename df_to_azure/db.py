@@ -61,6 +61,10 @@ class SqlUpsert:
             t.commit()
 
 
+def test_uniqueness_columns(df, id_columns):
+    assert df[id_columns].duplicated().sum() == 0, "Key columns are not unique"
+
+
 def auth_azure():
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
