@@ -8,7 +8,7 @@ with open("requirements.txt") as fp:
 
 setup(
     name="df_to_azure",
-    version="0.1.0",
+    version="0.1.1",
     author="Melvin Folkers, Erfan Nariman",
     author_email="melvin@zypp.io, erfan@zypp.io",
     description="Automatically create pipelines with copy activity from blob to SQL",
