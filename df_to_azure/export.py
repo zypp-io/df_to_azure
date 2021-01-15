@@ -84,6 +84,7 @@ def upload_dataset(table):
         return logging.info("no new records to upload.")
 
     if table.method == "create":
+        create_schema(table)
         push_to_azure(table)
     if table.method == "upsert":
         # key columns have to be unique for upsert.
