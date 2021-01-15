@@ -7,6 +7,7 @@ from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
 from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
+from df_to_azure.functions import create_dir
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
@@ -128,7 +129,9 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    full_path_to_file = os.path.join("/tmp", table.name + ".csv")
+    tmp_path = os.path.join(os.path.expanduser("~"), "tmp", "df_to_azure")
+    full_path_to_file = os.path.join(tmp_path, table.name + ".csv")
+    create_dir(tmp_path)
 
     table.df.to_csv(
         full_path_to_file, index=False, sep="^", line_terminator="\n"

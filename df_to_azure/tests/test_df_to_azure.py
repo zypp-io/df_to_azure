@@ -212,7 +212,7 @@ def test_run_multiple(file_dir="data"):
     df_dict = dict()
     for file in os.listdir(file_dir):
         if file.endswith(".csv"):
-            df_dict[file.split(".csv")[0]] = read_csv(os.path.join("data", file))
+            df_dict[file.split(".csv")[0]] = read_csv(os.path.join(file_dir, file))
 
     dfs_to_azure(df_dict, schema="test", method="create")
 
@@ -298,5 +298,5 @@ if __name__ == "__main__":
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
-    test_upsert_id_field_multiple_columns(file_dir_run)
-    # test_run_multiple()
+    # test_upsert_id_field_multiple_columns(file_dir_run)
+    test_run_multiple(file_dir_run)
