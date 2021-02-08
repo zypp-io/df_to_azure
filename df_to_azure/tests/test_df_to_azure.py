@@ -207,14 +207,18 @@ def test_duplicate_keys_upsert(file_dir="data"):
 # #############################
 def test_append():
 
-    df = DataFrame({'A': [1, 2, 3], "B": list('abc'), 'C': [4.0, 5.0, nan]})
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
 
     # 1. we create a new dataframe
-    adf_client, run_response = df_to_azure(df=df, tablename="append", schema="test", method="create")
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="append", schema="test", method="create"
+    )
     wait_till_pipeline_is_done(adf_client, run_response)
 
     # 2. we append the same data
-    adf_client, run_response = df_to_azure(df=df, tablename="append", schema="test", method="append")
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="append", schema="test", method="append"
+    )
     wait_till_pipeline_is_done(adf_client, run_response)
 
     # 3. we test if the data is what we expect
@@ -318,7 +322,7 @@ def test_wrong_method():
     """
     Not existing method
     """
-    df = DataFrame({'A': [1, 2, 3], "B": list('abc'), 'C': [4.0, 5.0, nan]})
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
     with pytest.raises(ValueError):
         df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert")
 
@@ -327,10 +331,9 @@ def test_upsert_no_id_field():
     """
     When upsert method is used, id_field has to be given
     """
-    df = DataFrame({'A': [1, 2, 3], "B": list('abc'), 'C': [4.0, 5.0, nan]})
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
     with pytest.raises(ValueError):
         df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert")
-
 
 
 # --- CLEAN UP ----
@@ -374,4 +377,3 @@ if __name__ == "__main__":
     # test_append()
     # test_wrong_method()
     # test_upsert_no_id_field()
-
