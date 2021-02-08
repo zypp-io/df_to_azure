@@ -292,6 +292,37 @@ def test_mapping_column_types():
     assert_frame_equal(expected, result)
 
 
+# --- CLEAN UP ----
+
+
+def clean_up_db():
+    tables_dict = {
+        "covid": ["covid_19"],
+        "staging": ["category", "employee_1", "employee_2", "sample"],
+        "test": [
+            "category",
+            "category_1",
+            "category_2",
+            "employee_1",
+            "employee_2",
+            "employee_duplicate_keys",
+            "employee_duplicate_keys_1",
+            "employee_duplicate_keys_2",
+            "sample",
+            "sample_1",
+            "sample_2",
+            "test_df_to_azure",
+        ],
+    }
+
+    with auth_azure() as con:
+        with con.begin():
+            for schema, tables in tables_dict.items():
+                for table in tables:
+                    query = f"DROP TABLE IF EXISTS {schema}.{table};"
+                    con.execute(query)
+
+
 if __name__ == "__main__":
     file_dir_run = "../data"
     # test_create_sample(file_dir_run)
@@ -299,4 +330,5 @@ if __name__ == "__main__":
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
-    test_run_multiple(file_dir_run)
+    # test_run_multiple(file_dir_run)
+    clean_up_db()
