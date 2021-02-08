@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import pytest
-from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query
+from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
 from numpy import array, nan
 from pandas._testing import assert_frame_equal
 from dotenv import load_dotenv
@@ -202,11 +202,37 @@ def test_duplicate_keys_upsert(file_dir="data"):
         )
 
 
+# #############################
+# #### APPEND METHOD TESTS ####
+# #############################
+def test_append():
+
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
+
+    # 1. we create a new dataframe
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="append", schema="test", method="create"
+    )
+    wait_till_pipeline_is_done(adf_client, run_response)
+
+    # 2. we append the same data
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="append", schema="test", method="append"
+    )
+    wait_till_pipeline_is_done(adf_client, run_response)
+
+    # 3. we test if the data is what we expect
+    with auth_azure() as con:
+        result = read_sql_table(table_name="append", con=con, schema="test")
+
+    expected = concat([df, df], ignore_index=True)
+
+    assert_frame_equal(result, expected)
+
+
 # #######################
 # #### GENERAL TESTS ####
 # #######################
-
-
 def test_run_multiple(file_dir="data"):
 
     df_dict = dict()
@@ -292,9 +318,25 @@ def test_mapping_column_types():
     assert_frame_equal(expected, result)
 
 
+def test_wrong_method():
+    """
+    Not existing method
+    """
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
+    with pytest.raises(ValueError):
+        df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert")
+
+
+def test_upsert_no_id_field():
+    """
+    When upsert method is used, id_field has to be given
+    """
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
+    with pytest.raises(ValueError):
+        df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert")
+
+
 # --- CLEAN UP ----
-
-
 def test_clean_up_db():
     tables_dict = {
         "covid": ["covid_19"],
@@ -331,4 +373,7 @@ if __name__ == "__main__":
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
     # test_run_multiple(file_dir_run)
-    test_clean_up_db()
+    # test_clean_up_db()
+    # test_append()
+    # test_wrong_method()
+    # test_upsert_no_id_field()
