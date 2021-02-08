@@ -295,7 +295,7 @@ def test_mapping_column_types():
 # --- CLEAN UP ----
 
 
-def clean_up_db():
+def test_clean_up_db():
     tables_dict = {
         "covid": ["covid_19"],
         "staging": ["category", "employee_1", "employee_2", "sample"],
@@ -331,4 +331,4 @@ if __name__ == "__main__":
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
     # test_run_multiple(file_dir_run)
-    clean_up_db()
+    test_clean_up_db()
