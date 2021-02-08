@@ -32,6 +32,4 @@ class TableParameters:
 
     def check_upsert(self):
         if self.method == "upsert" and not self.id_field:
-            raise ValueError(
-                "Id field not given while method is upsert."
-            )
+            raise ValueError("Id field not given while method is upsert.")
