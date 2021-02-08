@@ -24,7 +24,7 @@ class TableParameters:
 
     def check_method(self):
         valid_methods = ["create", "append", "upsert"]
-        if self.method not in ["create", "append", "upsert"]:
+        if self.method not in valid_methods:
             raise ValueError(
                 f"No valid method given: {self.method}, "
                 f"choose between {', '.join(valid_methods)}."
