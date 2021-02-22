@@ -377,3 +377,4 @@ if __name__ == "__main__":
     # test_append()
     # test_wrong_method()
     # test_upsert_no_id_field()
+    # test_clean_up_db()
