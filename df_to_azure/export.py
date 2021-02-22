@@ -107,7 +107,8 @@ def upload_dataset(table):
 def push_to_azure(table):
     con = auth_azure()
     table.df = convert_timedelta_to_seconds(table.df)
-    col_types = column_types(table.df)
+    max_str = get_max_str_len(table.df)
+    col_types = column_types(table.df, text_length=max_str)
     table.df.head(n=0).to_sql(
         name=table.name,
         con=con,
@@ -282,3 +283,12 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
     }
 
     return col_types
+
+
+def get_max_str_len(df):
+    df = df.select_dtypes("object")
+    max_str = 0
+    if not df.empty:
+        max_str = int(df.apply(lambda x: x.str.len().max()).max())
+    max_str = max(255, max_str)
+    return max_str
