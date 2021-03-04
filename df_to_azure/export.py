@@ -108,7 +108,9 @@ def push_to_azure(table):
     con = auth_azure()
     table.df = convert_timedelta_to_seconds(table.df)
     max_str = get_max_str_len(table.df)
-    col_types = column_types(table.df, text_length=max_str)
+    col_types = column_types(table.df)
+    col_types.update(max_str)
+
     table.df.head(n=0).to_sql(
         name=table.name,
         con=con,
@@ -287,8 +289,15 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
 
 def get_max_str_len(df):
     df = df.select_dtypes("object")
-    max_str = 0
+    default_len = 255
+
+    update_dict_len = {}
     if not df.empty:
-        max_str = int(df.apply(lambda x: x.str.len().max()).max())
-    max_str = max(255, max_str)
-    return max_str
+        for col in df.columns:
+            len_col = df[col].astype(str).str.len().max()
+            if len_col > default_len:
+                update_dict_len[col] = String(length=int(len_col))
+            if len_col > 8000:
+                update_dict_len[col] = String(length=None)
+
+    return update_dict_len

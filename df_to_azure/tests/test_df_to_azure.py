@@ -336,6 +336,14 @@ def test_upsert_no_id_field():
         df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert")
 
 
+def test_long_string():
+    """
+    When upsert method is used, id_field has to be given
+    """
+    df = DataFrame({"A": ["1" * 10000, "2", "3"]})
+    df_to_azure(df=df, tablename="long_string", schema="test", method="create")
+
+
 # --- CLEAN UP ----
 def test_clean_up_db():
     tables_dict = {
@@ -354,6 +362,8 @@ def test_clean_up_db():
             "sample_1",
             "sample_2",
             "test_df_to_azure",
+            "wrong_method",
+            "long_string",
         ],
     }
 
@@ -378,3 +388,4 @@ if __name__ == "__main__":
     # test_wrong_method()
     # test_upsert_no_id_field()
     # test_clean_up_db()
+    test_long_string()
