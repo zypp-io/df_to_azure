@@ -26,9 +26,9 @@ from azure.storage.blob import BlobServiceClient
 
 def create_service_principal_credentials():
     credentials = ServicePrincipalCredentials(
-        client_id=os.environ.get("client_id"),
-        secret=os.environ.get("secret"),
-        tenant=os.environ.get("tenant"),
+        client_id=os.environ.get("AZURE_CLIENT_ID"),
+        secret=os.environ.get("AZURE_CLIENT_SECRET"),
+        tenant=os.environ.get("AZURE_TENANT_ID"),
     )
 
     return credentials
