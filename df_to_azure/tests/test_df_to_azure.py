@@ -13,7 +13,7 @@ from df_to_azure.exceptions import PipelineRunError
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
-
+print(os.environ.get("client_id"))
 """
 This is the testing suite for df_to_azure. In general the following steps will be done per test:
 
@@ -377,7 +377,7 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    # test_create_sample(file_dir_run)
+    test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
@@ -388,4 +388,4 @@ if __name__ == "__main__":
     # test_wrong_method()
     # test_upsert_no_id_field()
     # test_clean_up_db()
-    test_long_string()
+    # test_long_string()
