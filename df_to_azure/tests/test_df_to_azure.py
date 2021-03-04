@@ -340,7 +340,7 @@ def test_long_string():
     """
     When upsert method is used, id_field has to be given
     """
-    df = DataFrame({"A": ["1"*10000, "2", "3"]})
+    df = DataFrame({"A": ["1" * 10000, "2", "3"]})
     df_to_azure(df=df, tablename="long_string", schema="test", method="create")
 
 
