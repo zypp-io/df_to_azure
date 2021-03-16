@@ -17,32 +17,33 @@ from azure.mgmt.datafactory.models import (
     SqlSink,
     SqlServerStoredProcedureActivity,
     DependencyCondition,
+    DatasetResource
 )
 from azure.mgmt.datafactory import DataFactoryManagementClient
-from azure.common.credentials import ServicePrincipalCredentials
+from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
 
-def create_service_principal_credentials():
-    credentials = ServicePrincipalCredentials(
+def create_credentials():
+    credentials = ClientSecretCredential(
         client_id=os.environ.get("AZURE_CLIENT_ID"),
-        secret=os.environ.get("AZURE_CLIENT_SECRET"),
-        tenant=os.environ.get("AZURE_TENANT_ID"),
+        client_secret=os.environ.get("AZURE_CLIENT_SECRET"),
+        tenant_id=os.environ.get("AZURE_TENANT_ID"),
     )
 
     return credentials
 
 
 def create_adf_client():
-    credentials = create_service_principal_credentials()
+    credentials = create_credentials()
     adf_client = DataFactoryManagementClient(credentials, os.environ.get("subscription_id"))
 
     return adf_client
 
 
 def create_resource_client():
-    credentials = create_service_principal_credentials()
+    credentials = create_credentials()
     resource_client = ResourceManagementClient(credentials, os.environ.get("subscription_id"))
 
     return resource_client
@@ -139,6 +140,7 @@ def create_input_blob(table):
             "firstRowAsHeader": "true",
         },
     )
+    ds_azure_blob = DatasetResource(properties=ds_azure_blob)
     adf_client = create_adf_client()
     adf_client.datasets.create_or_update(
         os.environ.get("rg_name"), os.environ.get("df_name"), ds_name, ds_azure_blob
@@ -154,6 +156,7 @@ def create_output_sql(table):
         linked_service_name=ds_ls,
         table_name=f"{table.schema}.{table.name}",
     )
+    data_azure_sql = DatasetResource(properties=data_azure_sql)
     adf_client = create_adf_client()
     adf_client.datasets.create_or_update(
         os.environ.get("rg_name"), os.environ.get("df_name"), ds_name, data_azure_sql
