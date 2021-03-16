@@ -17,7 +17,7 @@ from azure.mgmt.datafactory.models import (
     SqlSink,
     SqlServerStoredProcedureActivity,
     DependencyCondition,
-    DatasetResource
+    DatasetResource,
 )
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.identity import ClientSecretCredential
