@@ -13,7 +13,7 @@ from df_to_azure.exceptions import PipelineRunError
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
-print(os.environ.get("AZURE_CLIENT_ID"))
+
 """
 This is the testing suite for df_to_azure. In general the following steps will be done per test:
 

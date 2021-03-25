@@ -138,7 +138,7 @@ def upload_to_blob(table):
     create_dir(tmp_path)
 
     table.df.to_csv(
-        full_path_to_file, index=False, sep="^", line_terminator="\n"
+        full_path_to_file, index=False, sep="^", line_terminator="\n", quotechar='"'
     )  # export file to staging
 
     logging.info(f"start uploading blob {table.name}...")

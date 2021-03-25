@@ -8,3 +8,4 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+logging.getLogger("azure.identity._internal.get_token_mixin").setLevel(logging.WARNING)

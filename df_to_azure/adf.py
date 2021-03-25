@@ -138,6 +138,7 @@ def create_input_blob(table):
             "treatEmptyAsNull": "true",
             "skipLineCount": 0,
             "firstRowAsHeader": "true",
+            "quoteChar": '"',
         },
     )
     ds_azure_blob = DatasetResource(properties=ds_azure_blob)
