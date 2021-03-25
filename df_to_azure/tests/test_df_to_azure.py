@@ -341,7 +341,9 @@ def test_long_string():
     Test if long string is set correctly
     """
     df = DataFrame({"A": ["1" * 10000, "2", "3"]})
-    adf_client, run_response = df_to_azure(df=df, tablename="long_string", schema="test", method="create")
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="long_string", schema="test", method="create"
+    )
     wait_till_pipeline_is_done(adf_client, run_response)
 
 
@@ -350,11 +352,11 @@ def test_quote_char():
     Check if quote char is used correctly when line seperator is in text column
     """
 
-    df = DataFrame({
-        "A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]
-    })
+    df = DataFrame({"A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]})
 
-    adf_client, run_response = df_to_azure(df=df, tablename="quote_char", schema="test", method="create")
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="quote_char", schema="test", method="create"
+    )
     wait_till_pipeline_is_done(adf_client, run_response)
 
     with auth_azure() as con:
@@ -384,7 +386,7 @@ def test_clean_up_db():
             "test_df_to_azure",
             "wrong_method",
             "long_string",
-            "quote_char"
+            "quote_char",
         ],
     }
 
