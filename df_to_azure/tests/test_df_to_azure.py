@@ -13,7 +13,7 @@ from df_to_azure.exceptions import PipelineRunError
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
-print(os.environ.get("AZURE_CLIENT_ID"))
+
 """
 This is the testing suite for df_to_azure. In general the following steps will be done per test:
 
@@ -338,10 +338,32 @@ def test_upsert_no_id_field():
 
 def test_long_string():
     """
-    When upsert method is used, id_field has to be given
+    Test if long string is set correctly
     """
     df = DataFrame({"A": ["1" * 10000, "2", "3"]})
-    df_to_azure(df=df, tablename="long_string", schema="test", method="create")
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="long_string", schema="test", method="create"
+    )
+    wait_till_pipeline_is_done(adf_client, run_response)
+
+
+def test_quote_char():
+    """
+    Check if quote char is used correctly when line seperator is in text column
+    """
+
+    df = DataFrame({"A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]})
+
+    adf_client, run_response = df_to_azure(
+        df=df, tablename="quote_char", schema="test", method="create"
+    )
+    wait_till_pipeline_is_done(adf_client, run_response)
+
+    with auth_azure() as con:
+        result = read_sql_table(table_name="quote_char", con=con, schema="test")
+
+    # check if amount of rows is equal
+    assert df.shape[0] == result.shape[0]
 
 
 # --- CLEAN UP ----
@@ -364,6 +386,7 @@ def test_clean_up_db():
             "test_df_to_azure",
             "wrong_method",
             "long_string",
+            "quote_char",
         ],
     }
 
@@ -377,7 +400,7 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    test_create_sample(file_dir_run)
+    # test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
@@ -389,3 +412,4 @@ if __name__ == "__main__":
     # test_upsert_no_id_field()
     # test_clean_up_db()
     # test_long_string()
+    test_quote_char()

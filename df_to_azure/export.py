@@ -138,13 +138,15 @@ def upload_to_blob(table):
     create_dir(tmp_path)
 
     table.df.to_csv(
-        full_path_to_file, index=False, sep="^", line_terminator="\n"
+        full_path_to_file, index=False, sep="^", quotechar='"'
     )  # export file to staging
 
     logging.info(f"start uploading blob {table.name}...")
     with open(full_path_to_file, "rb") as data:
         blob_client.upload_blob(data, overwrite=True)
     logging.info(f"finished uploading blob {table.name}!")
+
+    os.remove(full_path_to_file)
 
 
 def create_schema(table):
