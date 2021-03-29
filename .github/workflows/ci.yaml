@@ -1,6 +1,12 @@
 name: DF to Azure
 
-on: [push]
+on:
+  push:
+    branches:
+      - '*'
+      - '!master'
+      - '!main'
+      - '!development'
 
 jobs:
   lint:
