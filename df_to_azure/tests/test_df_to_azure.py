@@ -387,6 +387,7 @@ def test_clean_up_db():
             "wrong_method",
             "long_string",
             "quote_char",
+            "append"
         ],
     }
 
