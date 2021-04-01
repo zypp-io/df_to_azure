@@ -7,7 +7,7 @@ from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
 from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
-from df_to_azure.functions import create_dir
+from df_to_azure.functions import create_dir, wait_till_pipeline_is_done
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
@@ -47,6 +47,7 @@ def run_multiple(df_dict, schema, method="create", id_field=None, cwd=None):
 
     # pipelines
     adf_client, run_response = adf.create_multiple_activity_pipeline(tables)
+    wait_till_pipeline_is_done(adf_client, run_response)
 
     return adf_client, run_response
 
@@ -74,6 +75,7 @@ def run(df, tablename, schema, method="create", id_field=None, cwd=None):
 
     # pipelines
     adf_client, run_response = adf.create_pipeline(table)
+    wait_till_pipeline_is_done(adf_client, run_response)
 
     return adf_client, run_response
 

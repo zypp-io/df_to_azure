@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
-from df_to_azure.exceptions import PipelineRunError
+from df_to_azure.functions import wait_till_pipeline_is_done
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
@@ -28,40 +28,19 @@ NOTE: To keep the testing lightweight, we don't import whole modules but just th
         like DataFrame from pandas.
 """
 
-
-def wait_till_pipeline_is_done(adf_client, run_response):
-    """
-    Function to check if pipeline is done, else wait.
-    We need this because tests will compare dataframes, else
-      the dataframe will be read before it's uploaded
-      through ADF.
-    """
-    status = ""
-    while status != "Succeeded":
-        pipeline_run = adf_client.pipeline_runs.get(
-            os.environ.get("rg_name"), os.environ.get("df_name"), run_response.run_id
-        )
-        time.sleep(2)
-        status = pipeline_run.status
-
-        if status.lower() == "failed":
-            raise PipelineRunError("Pipeline failed")
-
-
 # #############################
 # #### CREATE METHOD TESTS ####
 # #############################
 def test_create_sample(file_dir="data"):
     file_dir = os.path.join(file_dir, "sample_1.csv")
     expected = read_csv(file_dir)
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=expected,
         tablename="sample",
         schema="test",
         method="create",
         id_field="col_a",
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     with auth_azure() as con:
         result = read_sql_table(table_name="sample", con=con, schema="test")
@@ -72,14 +51,13 @@ def test_create_sample(file_dir="data"):
 def test_create_category(file_dir="data"):
     file_dir = os.path.join(file_dir, "category_1.csv")
     expected = read_csv(file_dir)
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=expected,
         tablename="category",
         schema="test",
         method="create",
         id_field="category_id",
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     with auth_azure() as con:
         result = read_sql_table(table_name="category", con=con, schema="test")
@@ -92,14 +70,13 @@ def test_create_category(file_dir="data"):
 # #############################
 def test_upsert_sample(file_dir="data"):
     file_dir = os.path.join(file_dir, "sample_2.csv")
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=read_csv(file_dir),
         tablename="sample",
         schema="test",
         method="upsert",
         id_field="col_a",
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     expected = DataFrame(
         {
@@ -117,14 +94,13 @@ def test_upsert_sample(file_dir="data"):
 
 def test_upsert_category(file_dir="data"):
     file_dir = os.path.join(file_dir, "category_2.csv")
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=read_csv(file_dir),
         tablename="category",
         schema="test",
         method="upsert",
         id_field="category_id",
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     expected = DataFrame(
         {
@@ -162,14 +138,13 @@ def test_upsert_id_field_multiple_columns(file_dir="data"):
     # upsert data
     file_dir_2 = os.path.join(file_dir, "employee_2.csv")
     df = read_csv(file_dir_2)
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=df,
         tablename="employee_1",
         schema="test",
         method="upsert",
         id_field=["employee_id", "week_nr"],
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     # read data back from upserted table in SQL
     with auth_azure() as con:
@@ -210,16 +185,14 @@ def test_append():
     df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
 
     # 1. we create a new dataframe
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=df, tablename="append", schema="test", method="create"
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     # 2. we append the same data
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=df, tablename="append", schema="test", method="append"
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     # 3. we test if the data is what we expect
     with auth_azure() as con:
@@ -264,10 +237,9 @@ def test_mapping_column_types():
             "Bool": [True, False, True],
         }
     )
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df, tablename="test_df_to_azure", schema="test", method="create"
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     expected = DataFrame(
         {
@@ -341,10 +313,9 @@ def test_long_string():
     Test if long string is set correctly
     """
     df = DataFrame({"A": ["1" * 10000, "2", "3"]})
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=df, tablename="long_string", schema="test", method="create"
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
 
 def test_quote_char():
@@ -354,10 +325,9 @@ def test_quote_char():
 
     df = DataFrame({"A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]})
 
-    adf_client, run_response = df_to_azure(
+    df_to_azure(
         df=df, tablename="quote_char", schema="test", method="create"
     )
-    wait_till_pipeline_is_done(adf_client, run_response)
 
     with auth_azure() as con:
         result = read_sql_table(table_name="quote_char", con=con, schema="test")
@@ -400,7 +370,7 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    # test_create_sample(file_dir_run)
+    test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
@@ -412,4 +382,4 @@ if __name__ == "__main__":
     # test_upsert_no_id_field()
     # test_clean_up_db()
     # test_long_string()
-    test_quote_char()
+    # test_quote_char()
