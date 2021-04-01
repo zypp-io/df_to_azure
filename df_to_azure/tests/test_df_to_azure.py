@@ -185,14 +185,10 @@ def test_append():
     df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
 
     # 1. we create a new dataframe
-    df_to_azure(
-        df=df, tablename="append", schema="test", method="create"
-    )
+    df_to_azure(df=df, tablename="append", schema="test", method="create")
 
     # 2. we append the same data
-    df_to_azure(
-        df=df, tablename="append", schema="test", method="append"
-    )
+    df_to_azure(df=df, tablename="append", schema="test", method="append")
 
     # 3. we test if the data is what we expect
     with auth_azure() as con:
@@ -237,9 +233,7 @@ def test_mapping_column_types():
             "Bool": [True, False, True],
         }
     )
-    df_to_azure(
-        df, tablename="test_df_to_azure", schema="test", method="create"
-    )
+    df_to_azure(df, tablename="test_df_to_azure", schema="test", method="create")
 
     expected = DataFrame(
         {
@@ -313,9 +307,7 @@ def test_long_string():
     Test if long string is set correctly
     """
     df = DataFrame({"A": ["1" * 10000, "2", "3"]})
-    df_to_azure(
-        df=df, tablename="long_string", schema="test", method="create"
-    )
+    df_to_azure(df=df, tablename="long_string", schema="test", method="create")
 
 
 def test_quote_char():
@@ -325,9 +317,7 @@ def test_quote_char():
 
     df = DataFrame({"A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]})
 
-    df_to_azure(
-        df=df, tablename="quote_char", schema="test", method="create"
-    )
+    df_to_azure(df=df, tablename="quote_char", schema="test", method="create")
 
     with auth_azure() as con:
         result = read_sql_table(table_name="quote_char", con=con, schema="test")
