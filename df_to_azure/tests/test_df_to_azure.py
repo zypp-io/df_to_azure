@@ -1,6 +1,5 @@
 import os
 import logging
-import time
 import pytest
 from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
 from numpy import array, nan
@@ -9,7 +8,6 @@ from dotenv import load_dotenv
 
 from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
-from df_to_azure.functions import wait_till_pipeline_is_done
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 load_dotenv(verbose=True, override=True)
@@ -31,6 +29,8 @@ NOTE: To keep the testing lightweight, we don't import whole modules but just th
 # #############################
 # #### CREATE METHOD TESTS ####
 # #############################
+
+
 def test_create_sample(file_dir="data"):
     file_dir = os.path.join(file_dir, "sample_1.csv")
     expected = read_csv(file_dir)
