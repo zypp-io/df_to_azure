@@ -22,7 +22,9 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str)
     return tables
 
 
-def run_multiple(df_dict, schema, method="create", id_field=None, cwd=None, wait_till_finished=False):
+def run_multiple(
+    df_dict, schema, method="create", id_field=None, cwd=None, wait_till_finished=False
+):
 
     tables = table_list(df_dict, schema, method, id_field, cwd)
 

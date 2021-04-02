@@ -193,10 +193,22 @@ def test_append():
     df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
 
     # 1. we create a new dataframe
-    df_to_azure(df=df, tablename="append", schema="test", method="create", wait_till_finished=True,)
+    df_to_azure(
+        df=df,
+        tablename="append",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
 
     # 2. we append the same data
-    df_to_azure(df=df, tablename="append", schema="test", method="append", wait_till_finished=True,)
+    df_to_azure(
+        df=df,
+        tablename="append",
+        schema="test",
+        method="append",
+        wait_till_finished=True,
+    )
 
     # 3. we test if the data is what we expect
     with auth_azure() as con:
@@ -217,7 +229,12 @@ def test_run_multiple(file_dir="data"):
         if file.endswith(".csv"):
             df_dict[file.split(".csv")[0]] = read_csv(os.path.join(file_dir, file))
 
-    dfs_to_azure(df_dict, schema="test", method="create", wait_till_finished=True,)
+    dfs_to_azure(
+        df_dict,
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
 
 
 def test_mapping_column_types():
@@ -241,7 +258,13 @@ def test_mapping_column_types():
             "Bool": [True, False, True],
         }
     )
-    df_to_azure(df, tablename="test_df_to_azure", schema="test", method="create", wait_till_finished=True,)
+    df_to_azure(
+        df,
+        tablename="test_df_to_azure",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
 
     expected = DataFrame(
         {
@@ -298,7 +321,13 @@ def test_wrong_method():
     """
     df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
     with pytest.raises(ValueError):
-        df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert", wait_till_finished=True,)
+        df_to_azure(
+            df=df,
+            tablename="wrong_method",
+            schema="test",
+            method="insert",
+            wait_till_finished=True,
+        )
 
 
 def test_upsert_no_id_field():
@@ -307,7 +336,13 @@ def test_upsert_no_id_field():
     """
     df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
     with pytest.raises(ValueError):
-        df_to_azure(df=df, tablename="wrong_method", schema="test", method="insert", wait_till_finished=True,)
+        df_to_azure(
+            df=df,
+            tablename="wrong_method",
+            schema="test",
+            method="insert",
+            wait_till_finished=True,
+        )
 
 
 def test_long_string():
@@ -315,7 +350,13 @@ def test_long_string():
     Test if long string is set correctly
     """
     df = DataFrame({"A": ["1" * 10000, "2", "3"]})
-    df_to_azure(df=df, tablename="long_string", schema="test", method="create", wait_till_finished=True,)
+    df_to_azure(
+        df=df,
+        tablename="long_string",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
 
 
 def test_quote_char():
@@ -325,7 +366,13 @@ def test_quote_char():
 
     df = DataFrame({"A": ["text1", "text2", "text3 \n with line 'seperator' \n test"]})
 
-    df_to_azure(df=df, tablename="quote_char", schema="test", method="create", wait_till_finished=True,)
+    df_to_azure(
+        df=df,
+        tablename="quote_char",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
 
     with auth_azure() as con:
         result = read_sql_table(table_name="quote_char", con=con, schema="test")
