@@ -1,6 +1,8 @@
 import logging
 import os
+import time
 import pandas as pd
+from df_to_azure.exceptions import PipelineRunError
 
 
 def print_item(group):
@@ -71,3 +73,32 @@ def create_dir(destination):
     except OSError:
         logging.warning("Error Creating directory. " + destination)
     return destination
+
+
+def wait_until_pipeline_is_done(adf_client, run_response):
+    """
+    Function to check if pipeline is done, else wait.
+
+    Options:
+        - Queued
+        - InProgress
+        - Succeeded
+        - Failed
+        - Canceling
+        - Canceled
+    """
+    # stop after 3 hours
+    timeout = time.time() + 60 * 60 * 3
+    status = ""
+    while status.lower() != "succeeded":
+        pipeline_run = adf_client.pipeline_runs.get(
+            os.environ.get("rg_name"), os.environ.get("df_name"), run_response.run_id
+        )
+        time.sleep(2)
+        status = pipeline_run.status
+
+        if status.lower() in ("failed", "canceling", "canceled"):
+            raise PipelineRunError("Pipeline failed or canceled")
+
+        if time.time() > timeout:
+            raise PipelineRunError("Pipeline is running too long")
