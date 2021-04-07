@@ -107,7 +107,7 @@ def upload_dataset(table):
         push_to_azure(table)
 
     upload_to_blob(table)
-    logging.info(f"Finished.number of transactions:{len(table.df)}")
+    logging.info(f"Finished! exported {table.df.shape[0]} records.")
 
 
 def push_to_azure(table):
@@ -125,12 +125,8 @@ def push_to_azure(table):
         schema=table.schema,
         dtype=col_types,
     )
-    result = (
-        f"push successful ({table.name}):",
-        len(table.df),
-        f"records pushed to Microsoft Azure ({table.df.shape[1]} columns)",
-    )
-    logging.info(result)
+
+    logging.info(f"created {table.df.shape[1]} columns in {table.schema}.{table.name}.")
 
 
 def upload_to_blob(table):
@@ -147,10 +143,10 @@ def upload_to_blob(table):
         full_path_to_file, index=False, sep="^", quotechar='"'
     )  # export file to staging
 
-    logging.info(f"start uploading blob {table.name}...")
+    logging.debug(f"start uploading blob {table.name}...")
     with open(full_path_to_file, "rb") as data:
         blob_client.upload_blob(data, overwrite=True)
-    logging.info(f"finished uploading blob {table.name}!")
+    logging.debug(f"finished uploading blob {table.name}!")
 
     os.remove(full_path_to_file)
 
