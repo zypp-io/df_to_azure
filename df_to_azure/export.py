@@ -146,7 +146,7 @@ def upload_to_blob(table):
         blob_client.upload_blob(data, overwrite=True)
     logging.info(f"finished uploading blob {table.name}!")
 
-    # os.remove(full_path_to_file)
+    os.remove(full_path_to_file)
 
 
 def create_schema(table):
