@@ -4,7 +4,6 @@ import pytest
 from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
 from numpy import array, nan
 from pandas._testing import assert_frame_equal
-from dotenv import load_dotenv
 from keyvault import secrets_to_environment
 
 from df_to_azure import df_to_azure, dfs_to_azure
