@@ -10,7 +10,6 @@ from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
-# load_dotenv(verbose=True, override=True)
 secrets_to_environment(keyvault_name="df-to-azure")
 
 """
