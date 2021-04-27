@@ -134,7 +134,7 @@ def create_input_blob(table):
         format={
             "type": "TextFormat",
             "columnDelimiter": "^",
-            "rowDelimiter": "\n",
+            "rowDelimiter": os.linesep,
             "treatEmptyAsNull": "true",
             "skipLineCount": 0,
             "firstRowAsHeader": "true",
