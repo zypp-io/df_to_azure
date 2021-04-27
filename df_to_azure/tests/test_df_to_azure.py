@@ -4,13 +4,14 @@ import pytest
 from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
 from numpy import array, nan
 from pandas._testing import assert_frame_equal
-from dotenv import load_dotenv
+from keyvault import secrets_to_environment
 
 from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
-load_dotenv(verbose=True, override=True)
+# load_dotenv(verbose=True, override=True)
+secrets_to_environment(keyvault_name="df-to-azure")
 
 """
 This is the testing suite for df_to_azure. In general the following steps will be done per test:
