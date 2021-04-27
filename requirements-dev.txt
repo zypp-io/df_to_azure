@@ -4,7 +4,6 @@ azure-mgmt-resource~=16.0.0
 azure-storage-blob~=12.8.0
 pandas~=1.2.3
 pyodbc~=4.0.30
-python-dotenv>=0.15.0
 pytest
 sqlalchemy~=1.4.0
 git+ssh://git@github.com/zypp-io/keyvault.git
