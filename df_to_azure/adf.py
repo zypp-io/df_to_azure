@@ -164,14 +164,15 @@ def create_output_sql(table):
     )
 
 
-def create_pipeline(table):
+def create_pipeline(table, p_name):
 
     activities = [create_copy_activity(table)]
     # If user wants to upsert, we append stored procedure activity to pipeline.
     if table.method == "upsert":
         activities.append(stored_procedure_activity(table.name))
     # Create a pipeline with the copy activity
-    p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} {table.name} to SQL"
+    if not p_name:
+        p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} {table.name} to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
@@ -212,14 +213,15 @@ def create_copy_activity(table):
     return copy_activity
 
 
-def create_multiple_activity_pipeline(tables):
+def create_multiple_activity_pipeline(tables, p_name):
 
     copy_activities = list()
     for table in tables:
         copy_activities.append(create_copy_activity(table))
 
     # Create a pipeline with the copy activity
-    p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} to SQL"
+    if not p_name:
+        p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()

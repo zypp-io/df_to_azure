@@ -23,7 +23,13 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str)
 
 
 def run_multiple(
-    df_dict, schema, method="create", id_field=None, cwd=None, wait_till_finished=False
+    df_dict,
+    schema,
+    method="create",
+    id_field=None,
+    cwd=None,
+    wait_till_finished=False,
+    pipeline_name=False,
 ):
 
     tables = table_list(df_dict, schema, method, id_field, cwd)
@@ -48,14 +54,23 @@ def run_multiple(
         adf.create_output_sql(table)
 
     # pipelines
-    adf_client, run_response = adf.create_multiple_activity_pipeline(tables)
+    adf_client, run_response = adf.create_multiple_activity_pipeline(tables, p_name=pipeline_name)
     if wait_till_finished:
         wait_until_pipeline_is_done(adf_client, run_response)
 
     return adf_client, run_response
 
 
-def run(df, tablename, schema, method="create", id_field=None, cwd=None, wait_till_finished=False):
+def run(
+    df,
+    tablename,
+    schema,
+    method="create",
+    id_field=None,
+    cwd=None,
+    wait_till_finished=False,
+    pipeline_name=None,
+):
     table = TableParameters(
         df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd
     )
@@ -77,7 +92,7 @@ def run(df, tablename, schema, method="create", id_field=None, cwd=None, wait_ti
     adf.create_output_sql(table)
 
     # pipelines
-    adf_client, run_response = adf.create_pipeline(table)
+    adf_client, run_response = adf.create_pipeline(table, pipeline_name)
     if wait_till_finished:
         wait_until_pipeline_is_done(adf_client, run_response)
 

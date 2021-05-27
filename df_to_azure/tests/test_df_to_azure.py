@@ -381,6 +381,21 @@ def test_quote_char():
     assert df.shape[0] == result.shape[0]
 
 
+def test_pipeline_name():
+    """
+    Test the argument pipeline_name
+    """
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
+    df_to_azure(
+        df=df,
+        tablename="pipeline_name",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+        pipeline_name="test_pipeline_name",
+    )
+
+
 # --- CLEAN UP ----
 def test_clean_up_db():
     tables_dict = {
@@ -403,6 +418,7 @@ def test_clean_up_db():
             "long_string",
             "quote_char",
             "append",
+            "pipeline_name",
         ],
     }
 
@@ -416,16 +432,19 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    test_create_sample(file_dir_run)
+    # test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
     # test_run_multiple(file_dir_run)
-    # test_clean_up_db()
     # test_append()
     # test_wrong_method()
     # test_upsert_no_id_field()
     # test_clean_up_db()
     # test_long_string()
     # test_quote_char()
+    # test_pipeline_name()
+
+    # RUN AS LAST FUNCTION
+    test_clean_up_db()
