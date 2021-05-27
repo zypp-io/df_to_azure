@@ -23,7 +23,13 @@ def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str)
 
 
 def run_multiple(
-    df_dict, schema, method="create", id_field=None, cwd=None, wait_till_finished=False, pipeline_name=False
+    df_dict,
+    schema,
+    method="create",
+    id_field=None,
+    cwd=None,
+    wait_till_finished=False,
+    pipeline_name=False,
 ):
 
     tables = table_list(df_dict, schema, method, id_field, cwd)
@@ -55,7 +61,16 @@ def run_multiple(
     return adf_client, run_response
 
 
-def run(df, tablename, schema, method="create", id_field=None, cwd=None, wait_till_finished=False, pipeline_name=None):
+def run(
+    df,
+    tablename,
+    schema,
+    method="create",
+    id_field=None,
+    cwd=None,
+    wait_till_finished=False,
+    pipeline_name=None,
+):
     table = TableParameters(
         df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd
     )

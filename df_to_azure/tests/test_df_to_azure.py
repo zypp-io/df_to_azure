@@ -392,7 +392,7 @@ def test_pipeline_name():
         schema="test",
         method="create",
         wait_till_finished=True,
-        pipeline_name="test_pipeline_name"
+        pipeline_name="test_pipeline_name",
     )
 
 
@@ -418,7 +418,7 @@ def test_clean_up_db():
             "long_string",
             "quote_char",
             "append",
-            "pipeline_name"
+            "pipeline_name",
         ],
     }
 
