@@ -1,6 +1,7 @@
 import os
 import logging
 from sqlalchemy import create_engine
+from urllib.parse import quote_plus
 
 
 class SqlUpsert:
@@ -69,7 +70,7 @@ def auth_azure():
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),
-        os.environ.get("SQL_PW"),
+        quote_plus(os.environ.get("SQL_PW")),
         os.environ.get("SQL_SERVER"),
         os.environ.get("SQL_DB"),
         "ODBC Driver 17 for SQL Server",

@@ -3,6 +3,7 @@ from numpy import dtype
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 import os
 import logging
+from tempfile import gettempdir
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
@@ -126,20 +127,20 @@ def upload_dataset(table):
 
 
 def push_to_azure(table):
-    con = auth_azure()
     table.df = convert_timedelta_to_seconds(table.df)
     max_str = get_max_str_len(table.df)
     col_types = column_types(table.df)
     col_types.update(max_str)
 
-    table.df.head(n=0).to_sql(
-        name=table.name,
-        con=con,
-        if_exists="replace",
-        index=False,
-        schema=table.schema,
-        dtype=col_types,
-    )
+    with auth_azure() as con:
+        table.df.head(n=0).to_sql(
+            name=table.name,
+            con=con,
+            if_exists="replace",
+            index=False,
+            schema=table.schema,
+            dtype=col_types,
+        )
 
     logging.info(f"created {table.df.shape[1]} columns in {table.schema}.{table.name}.")
 
@@ -150,7 +151,7 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    tmp_path = os.path.join(os.path.expanduser("~"), "tmp", "df_to_azure")
+    tmp_path = os.path.join(gettempdir(), "df_to_azure")
     full_path_to_file = os.path.join(tmp_path, table.name + ".csv")
     create_dir(tmp_path)
 
