@@ -3,7 +3,7 @@ from numpy import dtype
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 import os
 import logging
-from tempfile import gettempdir
+import tempfile
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
@@ -151,23 +151,22 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    full_path_to_file = os.path.join(gettempdir(), table.name + ".csv")
-    table.df.to_csv(
-        full_path_to_file, index=False, sep="^", quotechar='"', line_terminator="\n"
-    )  # export file to staging
+    with tempfile.TemporaryDirectory(suffix="_df_to_azure") as temp_dir:
+        full_path_to_file = os.path.join(temp_dir, table.name + ".csv")
+        table.df.to_csv(
+            full_path_to_file, index=False, sep="^", quotechar='"', line_terminator="\n"
+        )  # export file to staging
 
-    logging.debug(f"start uploading blob {table.name}...")
-    with open(full_path_to_file, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
-    logging.debug(f"finished uploading blob {table.name}!")
-
-    os.remove(full_path_to_file)
+        logging.debug(f"start uploading blob {table.name}...")
+        with open(full_path_to_file, "rb") as data:
+            blob_client.upload_blob(data, overwrite=True)
+        logging.debug(f"finished uploading blob {table.name}!")
 
 
 def create_schema(table):
     query = f"""
     IF NOT EXISTS ( SELECT  *
-                FROM    sys.schemas
+                FROM    sys.schemas                              
                 WHERE   name = N'{table.schema}' )
     EXEC('CREATE SCHEMA [{table.schema}]');
     """
