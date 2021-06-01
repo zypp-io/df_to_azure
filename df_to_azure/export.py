@@ -151,10 +151,7 @@ def upload_to_blob(table):
         container=os.environ.get("ls_blob_container_name"),
         blob=f"{table.name}/{table.name}",
     )
-    tmp_path = os.path.join(gettempdir(), "df_to_azure")
-    full_path_to_file = os.path.join(tmp_path, table.name + ".csv")
-    create_dir(tmp_path)
-
+    full_path_to_file = os.path.join(gettempdir(), table.name + ".csv")
     table.df.to_csv(
         full_path_to_file, index=False, sep="^", quotechar='"', line_terminator="\n"
     )  # export file to staging
