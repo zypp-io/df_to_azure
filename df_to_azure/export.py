@@ -8,7 +8,7 @@ from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
 from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
-from df_to_azure.functions import create_dir, wait_until_pipeline_is_done
+from df_to_azure.functions import wait_until_pipeline_is_done
 
 
 def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
@@ -166,7 +166,7 @@ def upload_to_blob(table):
 def create_schema(table):
     query = f"""
     IF NOT EXISTS ( SELECT  *
-                FROM    sys.schemas                              
+                FROM    sys.schemas
                 WHERE   name = N'{table.schema}' )
     EXEC('CREATE SCHEMA [{table.schema}]');
     """
@@ -182,62 +182,6 @@ def execute_stmt(stmt):
         t = con.begin()
         con.execute(stmt)
         t.commit()
-
-
-def delete_current_records(table):
-    """
-    :param df: the dataframe containing new records
-    :param tablename: the name of the table
-    :param schema: schema in the database
-    :param id_field: field to check if the values are already in the database
-    :return: executes a delete statement in Azure SQL for the new records.
-    """
-
-    del_list = get_overlapping_records(table)
-    stmt = create_sql_delete_stmt(del_list, table)
-
-    if len(del_list):
-        execute_stmt(stmt)
-    else:
-        logging.info("skip deleting. no records in delete statement")
-
-
-def get_overlapping_records(table):
-    """
-    :param df: the dataframe containing new records
-    :param tablename: the name of the table
-    :param schema: schema in the database
-    :param id_field: field to check if the values are already in the database
-    :return:  a list of records that are overlapping
-    """
-    con = auth_azure()
-
-    current_db = pd.read_sql_table(table_name=table.name, con=con, schema=table.schema)
-    overlapping_records = current_db[current_db[table.id_field].isin(table.df[table.id_field])]
-    del_list = overlapping_records.astype(str)[table.id_field].to_list()
-
-    new_records = table.df[~table.df[table.id_field].isin(current_db[table.id_field])]
-    logging.info(f"{len(overlapping_records)} updated records and {len(new_records)} new records")
-
-    return del_list
-
-
-def create_sql_delete_stmt(del_list, table):
-    """
-    :param del_list: list of records that need to be formatted in SQL delete statement.
-    :param tablename: the name of the table
-    :param schema: schema in the database
-    :param id_field: field to check if the values are already in the database
-    :return: SQL statement for deleting the specific records
-    """
-
-    del_list = ["'" + x + "'" for x in del_list]
-
-    sql_list = ", ".join(del_list)
-    sql_stmt = f"DELETE FROM {table.schema}.{table.name} WHERE {table.id_field} IN ({sql_list})"
-    logging.info(f"{len(del_list)} run_id's in delete statement")
-
-    return sql_stmt
 
 
 def convert_timedelta_to_seconds(df: pd.DataFrame) -> pd.DataFrame:
