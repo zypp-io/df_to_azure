@@ -22,7 +22,7 @@ from azure.mgmt.datafactory.models import (
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
-from azure.storage.blob import BlobServiceClient, BlobClient
+from azure.storage.blob import BlobServiceClient
 
 
 def create_credentials():

@@ -397,6 +397,13 @@ def test_pipeline_name():
     )
 
 
+def test_empty_dataframe():
+    df = DataFrame()
+    df_to_azure(
+        df=df, tablename="empty_dataframe", schema="test", method="create", wait_till_finished=True
+    )
+
+
 # --- CLEAN UP ----
 def test_clean_up_db():
     tables_dict = {
@@ -433,7 +440,7 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    test_create_sample(file_dir_run)
+    # test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
@@ -447,6 +454,7 @@ if __name__ == "__main__":
     # test_long_string()
     # test_quote_char()
     # test_pipeline_name()
+    test_empty_dataframe()
 
     # RUN AS LAST FUNCTION
     test_clean_up_db()
