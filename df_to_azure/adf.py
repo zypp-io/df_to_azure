@@ -79,16 +79,6 @@ def create_blob_service_client():
     return blob_service_client
 
 
-def create_blob_client():
-    connect_str = (
-        f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
-        f";AccountKey={os.environ.get('ls_blob_account_key')}"
-    )
-    blob_client = BlobClient.from_connection_string(connect_str, timeout=600)
-
-    return blob_client
-
-
 def create_blob_container():
     blob_service_client = create_blob_service_client()
     try:

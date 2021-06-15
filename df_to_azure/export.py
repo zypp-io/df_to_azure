@@ -3,7 +3,6 @@ from numpy import dtype
 from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric
 import os
 import logging
-import tempfile
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
 from df_to_azure.parse_settings import TableParameters
@@ -102,8 +101,9 @@ def run(
 
 def upload_dataset(table):
 
-    if len(table.df) == 0:
-        return logging.info("no new records to upload.")
+    if table.df.empty:
+        logging.info("Data empty, no new records to upload.")
+        return None
 
     if table.method == "create":
         create_schema(table)
@@ -152,22 +152,11 @@ def upload_to_blob(table):
         blob=f"{table.name}/{table.name}.csv",
     )
 
-    # data = table.df.to_csv(
-    #     index=False, sep="^", quotechar='"', line_terminator="\n"
-    # )
-    #
-    # blob_client.upload_blob(data, overwrite=True)
+    data = table.df.to_csv(
+        index=False, sep="^", quotechar='"', line_terminator="\n"
+    )
 
-    with tempfile.TemporaryDirectory(suffix="_df_to_azure") as temp_dir:
-        full_path_to_file = os.path.join(temp_dir, table.name + ".csv")
-        table.df.to_csv(
-            full_path_to_file, index=False, sep="^", quotechar='"', line_terminator="\n"
-        )  # export file to staging
-
-        logging.debug(f"start uploading blob {table.name}...")
-        with open(full_path_to_file, "rb") as data:
-            blob_client.upload_blob(data, overwrite=True)
-        logging.debug(f"finished uploading blob {table.name}!")
+    blob_client.upload_blob(data, overwrite=True)
 
 
 def create_schema(table):

@@ -94,7 +94,7 @@ def wait_until_pipeline_is_done(adf_client, run_response):
         pipeline_run = adf_client.pipeline_runs.get(
             os.environ.get("rg_name"), os.environ.get("df_name"), run_response.run_id
         )
-        time.sleep(2)
+        time.sleep(1)
         status = pipeline_run.status
 
         if status.lower() in ("failed", "canceling", "canceled"):
