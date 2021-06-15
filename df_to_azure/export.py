@@ -1,6 +1,6 @@
 import pandas as pd
 from numpy import dtype
-from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
+from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric
 import os
 import logging
 import tempfile
@@ -233,11 +233,12 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
         dtype("int16"): Integer(),
         dtype("int8"): Integer(),
         pd.Int64Dtype(): Integer(),
-        dtype("float64"): Float(precision=decimal_precision),
-        dtype("float32"): Float(precision=decimal_precision),
-        dtype("float16"): Float(precision=decimal_precision),
+        dtype("float64"): Numeric(precision=18, scale=decimal_precision),
+        dtype("float32"): Numeric(precision=18, scale=decimal_precision),
+        dtype("float16"): Numeric(precision=18, scale=decimal_precision),
         dtype("<M8[ns]"): DateTime(),
         dtype("bool"): Boolean(),
+        pd.BooleanDtype(): Boolean()
     }
 
     col_types = {
