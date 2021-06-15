@@ -449,4 +449,4 @@ if __name__ == "__main__":
     # test_pipeline_name()
 
     # RUN AS LAST FUNCTION
-    # test_clean_up_db()
+    test_clean_up_db()
