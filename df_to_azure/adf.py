@@ -193,12 +193,8 @@ def create_copy_activity(table):
     blob_source = BlobSource()
     sql_sink = SqlSink()
 
-    ds_in_ref = DatasetReference(
-        reference_name=f"BLOB_dftoazure_{table.name}"
-    )
-    ds_out_ref = DatasetReference(
-        reference_name=f"SQL_dftoazure_{table.name}"
-    )
+    ds_in_ref = DatasetReference(reference_name=f"BLOB_dftoazure_{table.name}")
+    ds_out_ref = DatasetReference(reference_name=f"SQL_dftoazure_{table.name}")
     copy_activity = CopyActivity(
         name=act_name,
         inputs=[ds_in_ref],
@@ -218,7 +214,7 @@ def create_multiple_activity_pipeline(tables, p_name):
 
     # Create a pipeline with the copy activity
     if not p_name:
-        p_name = f"DF_TO_AZURE to SQL"
+        p_name = "DF_TO_AZURE to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
@@ -226,9 +222,7 @@ def create_multiple_activity_pipeline(tables, p_name):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    logging.info(
-        f"triggering pipeline run for df_to_azure!"
-    )
+    logging.info("triggering pipeline run for df_to_azure!")
     run_response = adf_client.pipelines.create_run(
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
     )
