@@ -433,12 +433,12 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    # test_create_sample(file_dir_run)
+    test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
-    test_mapping_column_types()
+    # test_mapping_column_types()
     # test_run_multiple(file_dir_run)
     # test_append()
     # test_wrong_method()

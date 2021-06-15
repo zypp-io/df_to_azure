@@ -148,7 +148,7 @@ def push_to_azure(table):
 def upload_to_blob(table):
     blob_client = create_blob_service_client()
     blob_client = blob_client.get_blob_client(
-        container=os.environ.get("ls_blob_container_name"),
+        container="dftoazure",
         blob=f"{table.name}/{table.name}",
     )
     with tempfile.TemporaryDirectory(suffix="_df_to_azure") as temp_dir:
