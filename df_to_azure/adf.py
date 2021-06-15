@@ -180,13 +180,10 @@ def create_pipeline(table, p_name):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    trigger = True if os.environ.get("trigger") == "True" else False
-    run_response = None
-    if trigger:
-        logging.info(f"triggering pipeline run for {table.name}!")
-        run_response = adf_client.pipelines.create_run(
-            os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
-        )
+    logging.info(f"triggering pipeline run for {table.name}!")
+    run_response = adf_client.pipelines.create_run(
+        os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
+    )
 
     return adf_client, run_response
 
@@ -229,15 +226,12 @@ def create_multiple_activity_pipeline(tables, p_name):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    trigger = True if os.environ.get("trigger") == "True" else False
-    run_response = None
-    if trigger:
-        logging.info(
-            f"triggering pipeline run for {os.environ.get('ls_blob_container_name').capitalize()}!"
-        )
-        run_response = adf_client.pipelines.create_run(
-            os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
-        )
+    logging.info(
+        f"triggering pipeline run for {os.environ.get('ls_blob_container_name').capitalize()}!"
+    )
+    run_response = adf_client.pipelines.create_run(
+        os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
+    )
 
     return adf_client, run_response
 
