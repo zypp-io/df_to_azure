@@ -264,7 +264,7 @@ def test_mapping_column_types():
         schema="test",
         method="create",
         wait_till_finished=True,
-        pipeline_name="test_column_types"
+        pipeline_name="test_column_types",
     )
 
     expected = DataFrame(

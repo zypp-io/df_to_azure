@@ -238,7 +238,7 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
         dtype("float16"): Numeric(precision=18, scale=decimal_precision),
         dtype("<M8[ns]"): DateTime(),
         dtype("bool"): Boolean(),
-        pd.BooleanDtype(): Boolean()
+        pd.BooleanDtype(): Boolean(),
     }
 
     col_types = {
