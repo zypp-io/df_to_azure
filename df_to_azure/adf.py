@@ -22,7 +22,7 @@ from azure.mgmt.datafactory.models import (
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, BlobClient
 
 
 def create_credentials():
@@ -79,6 +79,16 @@ def create_blob_service_client():
     return blob_service_client
 
 
+def create_blob_client():
+    connect_str = (
+        f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
+        f";AccountKey={os.environ.get('ls_blob_account_key')}"
+    )
+    blob_client = BlobClient.from_connection_string(connect_str, timeout=600)
+
+    return blob_client
+
+
 def create_blob_container():
     blob_service_client = create_blob_service_client()
     try:
@@ -130,7 +140,7 @@ def create_input_blob(table):
     ds_azure_blob = AzureBlobDataset(
         linked_service_name=ds_ls,
         folder_path=f"dftoazure/{table.name}",
-        file_name=table.name,
+        file_name=f"{table.name}.csv",
         format={
             "type": "TextFormat",
             "columnDelimiter": "^",

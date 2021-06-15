@@ -149,8 +149,15 @@ def upload_to_blob(table):
     blob_client = create_blob_service_client()
     blob_client = blob_client.get_blob_client(
         container="dftoazure",
-        blob=f"{table.name}/{table.name}",
+        blob=f"{table.name}/{table.name}.csv",
     )
+
+    # data = table.df.to_csv(
+    #     index=False, sep="^", quotechar='"', line_terminator="\n"
+    # )
+    #
+    # blob_client.upload_blob(data, overwrite=True)
+
     with tempfile.TemporaryDirectory(suffix="_df_to_azure") as temp_dir:
         full_path_to_file = os.path.join(temp_dir, table.name + ".csv")
         table.df.to_csv(
