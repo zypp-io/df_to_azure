@@ -172,7 +172,7 @@ def create_pipeline(table, p_name):
         activities.append(stored_procedure_activity(table.name))
     # Create a pipeline with the copy activity
     if not p_name:
-        p_name = f"DFTOAZURE {table.name} to SQL"
+        p_name = f"{table.schema} {table.name} to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
