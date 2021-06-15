@@ -82,7 +82,7 @@ def create_blob_service_client():
 def create_blob_container():
     blob_service_client = create_blob_service_client()
     try:
-        blob_service_client.create_container(os.environ.get("ls_blob_container_name"))
+        blob_service_client.create_container("dftoazure")
     except:
         logging.info("CreateContainerError: Container already exists.")
 
@@ -124,12 +124,12 @@ def create_linked_service_blob():
 
 
 def create_input_blob(table):
-    ds_name = f"BLOB_{os.environ.get('ls_blob_container_name')}_{table.name}"
+    ds_name = f"BLOB_dftoazure_{table.name}"
 
     ds_ls = LinkedServiceReference(reference_name=os.environ.get("ls_blob_name"))
     ds_azure_blob = AzureBlobDataset(
         linked_service_name=ds_ls,
-        folder_path=f"{os.environ.get('ls_blob_container_name')}/{table.name}",
+        folder_path=f"dftoazure/{table.name}",
         file_name=table.name,
         format={
             "type": "TextFormat",
@@ -150,7 +150,7 @@ def create_input_blob(table):
 
 def create_output_sql(table):
 
-    ds_name = f"SQL_{os.environ.get('ls_blob_container_name')}_{table.name}"
+    ds_name = f"SQL_dftoazure_{table.name}"
 
     ds_ls = LinkedServiceReference(reference_name=os.environ.get("ls_sql_name"))
     data_azure_sql = AzureSqlTableDataset(
@@ -172,7 +172,7 @@ def create_pipeline(table, p_name):
         activities.append(stored_procedure_activity(table.name))
     # Create a pipeline with the copy activity
     if not p_name:
-        p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} {table.name} to SQL"
+        p_name = f"{table.schema} {table.name} to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
@@ -180,13 +180,10 @@ def create_pipeline(table, p_name):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    trigger = True if os.environ.get("trigger") == "True" else False
-    run_response = None
-    if trigger:
-        logging.info(f"triggering pipeline run for {table.name}!")
-        run_response = adf_client.pipelines.create_run(
-            os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
-        )
+    logging.info(f"triggering pipeline run for {table.name}!")
+    run_response = adf_client.pipelines.create_run(
+        os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
+    )
 
     return adf_client, run_response
 
@@ -196,12 +193,8 @@ def create_copy_activity(table):
     blob_source = BlobSource()
     sql_sink = SqlSink()
 
-    ds_in_ref = DatasetReference(
-        reference_name=f"BLOB_{os.environ.get('ls_blob_container_name')}_{table.name}"
-    )
-    ds_out_ref = DatasetReference(
-        reference_name=f"SQL_{os.environ.get('ls_blob_container_name')}_{table.name}"
-    )
+    ds_in_ref = DatasetReference(reference_name=f"BLOB_dftoazure_{table.name}")
+    ds_out_ref = DatasetReference(reference_name=f"SQL_dftoazure_{table.name}")
     copy_activity = CopyActivity(
         name=act_name,
         inputs=[ds_in_ref],
@@ -221,7 +214,7 @@ def create_multiple_activity_pipeline(tables, p_name):
 
     # Create a pipeline with the copy activity
     if not p_name:
-        p_name = f"{os.environ.get('ls_blob_container_name').capitalize()} to SQL"
+        p_name = "DF_TO_AZURE to SQL"
     params_for_pipeline = {}
     p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
     adf_client = create_adf_client()
@@ -229,15 +222,10 @@ def create_multiple_activity_pipeline(tables, p_name):
         os.environ.get("rg_name"), os.environ.get("df_name"), p_name, p_obj
     )
 
-    trigger = True if os.environ.get("trigger") == "True" else False
-    run_response = None
-    if trigger:
-        logging.info(
-            f"triggering pipeline run for {os.environ.get('ls_blob_container_name').capitalize()}!"
-        )
-        run_response = adf_client.pipelines.create_run(
-            os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
-        )
+    logging.info("triggering pipeline run for df_to_azure!")
+    run_response = adf_client.pipelines.create_run(
+        os.environ.get("rg_name"), os.environ.get("df_name"), p_name, parameters={}
+    )
 
     return adf_client, run_response
 

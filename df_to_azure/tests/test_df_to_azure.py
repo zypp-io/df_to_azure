@@ -251,8 +251,8 @@ def test_mapping_column_types():
             "Int": [1, 2, 3],
             "Int16": array([1, 2, 3], dtype="int16"),
             "pd_Int64": Series([1, 2, 3], dtype="Int64"),
-            "Float": [4.0, 5.0, 6.0],
-            "Float32": array([4, 4, 6], dtype="float32"),
+            "Float": [4.52, 5.28, 6.71],
+            "Float32": array([4.52, 5.28, 6.71], dtype="float32"),
             "Date": dr1,
             "Timedelta": dr1 - dr2,
             "Bool": [True, False, True],
@@ -264,6 +264,7 @@ def test_mapping_column_types():
         schema="test",
         method="create",
         wait_till_finished=True,
+        pipeline_name="test_column_types",
     )
 
     expected = DataFrame(
@@ -286,14 +287,14 @@ def test_mapping_column_types():
                 "int",
                 "int",
                 "int",
-                "real",
-                "real",
+                "numeric",
+                "numeric",
                 "datetime",
-                "real",
+                "numeric",
                 "bit",
             ],
             "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan],
-            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 24, 24, nan, 24, nan],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 18, 18, nan, 18, nan],
         }
     )
 
@@ -432,11 +433,12 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    # test_create_sample(file_dir_run)
+    test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
+    # test_mapping_column_types()
     # test_run_multiple(file_dir_run)
     # test_append()
     # test_wrong_method()

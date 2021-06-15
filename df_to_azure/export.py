@@ -1,6 +1,6 @@
 import pandas as pd
 from numpy import dtype
-from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
+from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric
 import os
 import logging
 import tempfile
@@ -148,7 +148,7 @@ def push_to_azure(table):
 def upload_to_blob(table):
     blob_client = create_blob_service_client()
     blob_client = blob_client.get_blob_client(
-        container=os.environ.get("ls_blob_container_name"),
+        container="dftoazure",
         blob=f"{table.name}/{table.name}",
     )
     with tempfile.TemporaryDirectory(suffix="_df_to_azure") as temp_dir:
@@ -233,11 +233,12 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
         dtype("int16"): Integer(),
         dtype("int8"): Integer(),
         pd.Int64Dtype(): Integer(),
-        dtype("float64"): Float(precision=decimal_precision),
-        dtype("float32"): Float(precision=decimal_precision),
-        dtype("float16"): Float(precision=decimal_precision),
+        dtype("float64"): Numeric(precision=18, scale=decimal_precision),
+        dtype("float32"): Numeric(precision=18, scale=decimal_precision),
+        dtype("float16"): Numeric(precision=18, scale=decimal_precision),
         dtype("<M8[ns]"): DateTime(),
         dtype("bool"): Boolean(),
+        pd.BooleanDtype(): Boolean(),
     }
 
     col_types = {
