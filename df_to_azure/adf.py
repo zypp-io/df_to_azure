@@ -130,7 +130,7 @@ def create_input_blob(table):
     ds_azure_blob = AzureBlobDataset(
         linked_service_name=ds_ls,
         folder_path=f"dftoazure/{table.name}",
-        file_name=table.name,
+        file_name=f"{table.name}.csv",
         format={
             "type": "TextFormat",
             "columnDelimiter": "^",
