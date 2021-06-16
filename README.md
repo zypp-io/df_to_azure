@@ -76,6 +76,9 @@ subscription_id : ""
 - [Melvin Folkers](https://github.com/melvinfolkers)
 - [Erfan Nariman](https://github.com/erfannariman)
 
+## Support:
+
+For support on using this module, you can reach us on [hello@zypp.io](mailto:hello@zypp.io?subject=Support using df_to_azure)
 ---
 
 ## Testing
