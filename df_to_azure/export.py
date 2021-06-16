@@ -1,6 +1,6 @@
 import pandas as pd
 from numpy import dtype
-from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric
+from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric, BigInteger
 import os
 import sys
 import logging
@@ -124,14 +124,16 @@ def upload_dataset(table):
         push_to_azure(table)
 
     upload_to_blob(table)
-    logging.info(f"Finished! exported {table.df.shape[0]} records.")
+    logging.info(f"Finished exporting {table.df.shape[0]} records to Azure Blob Storage.")
 
 
 def push_to_azure(table):
     table.df = convert_timedelta_to_seconds(table.df)
     max_str = get_max_str_len(table.df)
+    bigint = check_for_bigint(table.df)
     col_types = column_types(table.df)
-    col_types.update(max_str)
+    for u in [max_str, bigint]:
+        col_types.update(u)
 
     with auth_azure() as con:
         table.df.head(n=0).to_sql(
@@ -257,3 +259,19 @@ def get_max_str_len(df):
                 update_dict_len[col] = String(length=None)
 
     return update_dict_len
+
+
+def check_for_bigint(df):
+    ints = df.select_dtypes(include=["int8", "int16", "int32", "int64"])
+    if ints.empty:
+        return {}
+
+    # These are the highest and lowest number
+    # which can be stored in an integer column in SQL.
+    # For numbers out of these bounds, we convert to bigint
+    check = (ints.lt(-2147483648) | ints.gt(2147483647)).any()
+    cols_bigint = check[check].index.tolist()
+
+    update_dict_bigint = {col: BigInteger() for col in cols_bigint}
+
+    return update_dict_bigint

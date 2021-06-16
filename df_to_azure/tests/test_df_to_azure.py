@@ -9,6 +9,7 @@ from keyvault import secrets_to_environment
 from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
 
+
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
 
@@ -399,9 +400,37 @@ def test_pipeline_name():
 
 def test_empty_dataframe():
     df = DataFrame()
-    df_to_azure(
-        df=df, tablename="empty_dataframe", schema="test", method="create", wait_till_finished=True
-    )
+
+    with pytest.raises(SystemExit):
+        df_to_azure(
+            df=df,
+            tablename="empty_dataframe",
+            schema="test",
+            method="create",
+            wait_till_finished=True,
+        )
+
+
+def test_convert_bigint():
+    df = DataFrame({"A": [1, 2, -2147483649], "B": [10, 20, 30]})
+
+    df_to_azure(df=df, tablename="bigint", schema="test", wait_till_finished=True)
+
+    query = """
+    SELECT
+        COLUMN_NAME,
+        DATA_TYPE
+    FROM
+        INFORMATION_SCHEMA.COLUMNS
+    WHERE
+        TABLE_NAME = 'bigint';
+    """
+
+    with auth_azure() as con:
+        result = read_sql_query(query, con=con)
+
+    expected = DataFrame({"COLUMN_NAME": ["A", "B"], "DATA_TYPE": ["bigint", "int"]})
+    assert_frame_equal(result, expected)
 
 
 # --- CLEAN UP ----
@@ -427,6 +456,8 @@ def test_clean_up_db():
             "quote_char",
             "append",
             "pipeline_name",
+            "bigint",
+            "bigint_convert",
         ],
     }
 
@@ -455,6 +486,7 @@ if __name__ == "__main__":
     # test_quote_char()
     # test_pipeline_name()
     test_empty_dataframe()
+    # test_convert_bigint()
 
     # RUN AS LAST FUNCTION
     test_clean_up_db()
