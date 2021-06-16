@@ -8,7 +8,6 @@ from keyvault import secrets_to_environment
 
 from df_to_azure import df_to_azure, dfs_to_azure
 from df_to_azure.db import auth_azure
-from df_to_azure.exceptions import PipelineRunError
 
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
@@ -409,9 +408,7 @@ def test_empty_dataframe():
 def test_convert_bigint():
     df = DataFrame({"A": [1, 2, -2147483649], "B": [10, 20, 30]})
 
-    df_to_azure(
-        df=df, tablename="bigint", schema="test", wait_till_finished=True
-    )
+    df_to_azure(df=df, tablename="bigint", schema="test", wait_till_finished=True)
 
     query = """
     SELECT
@@ -428,6 +425,7 @@ def test_convert_bigint():
 
     expected = DataFrame({"COLUMN_NAME": ["A", "B"], "DATA_TYPE": ["bigint", "int"]})
     assert_frame_equal(result, expected)
+
 
 # --- CLEAN UP ----
 def test_clean_up_db():
