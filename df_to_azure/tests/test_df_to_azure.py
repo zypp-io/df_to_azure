@@ -400,9 +400,11 @@ def test_pipeline_name():
 
 def test_empty_dataframe():
     df = DataFrame()
-    df_to_azure(
-        df=df, tablename="empty_dataframe", schema="test", method="create", wait_till_finished=True
-    )
+
+    with pytest.raises(SystemExit):
+        df_to_azure(
+            df=df, tablename="empty_dataframe", schema="test", method="create", wait_till_finished=True
+        )
 
 
 def test_convert_bigint():
@@ -479,8 +481,8 @@ if __name__ == "__main__":
     # test_long_string()
     # test_quote_char()
     # test_pipeline_name()
-    # test_empty_dataframe()
-    test_convert_bigint()
+    test_empty_dataframe()
+    # test_convert_bigint()
 
     # RUN AS LAST FUNCTION
-    # test_clean_up_db()
+    test_clean_up_db()
