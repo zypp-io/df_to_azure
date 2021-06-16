@@ -266,8 +266,9 @@ def check_for_bigint(df):
     if ints.empty:
         return {}
 
-    # these are the highest en lowest number
-    # which can be stored in an integer column in SQL
+    # These are the highest and lowest number
+    # which can be stored in an integer column in SQL.
+    # For numbers out of these bounds, we convert to bigint
     check = (ints.lt(-2147483648) | ints.gt(2147483647)).any()
     cols_bigint = check[check].index.tolist()
 
