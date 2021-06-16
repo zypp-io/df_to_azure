@@ -9,7 +9,8 @@
 The purpose of this project is to upload large datasets using Azure Data Factory combined with a Azure SQL Server. 
 In steps the following process kicks off:<p>
     1. The data will be uploaded as a .csv file to Azure Blob storage.<br>
-    2. A SQL Database table is prepared based on the parameters in the `settings/yml/adf_settings.yml`<br>
+    2. A SQL Database table is prepared based [pandas DataFrame types](https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes), 
+which will be converted to the corresponding [SQLAlchemy types](https://docs.sqlalchemy.org/en/14/core/type_basics.html) <br>
     3. A pipeline is created for uploading the .csv from the Blob storage into the SQL table.<br>
     4. The pipeline is triggered, so that the .csv file is bulk inserted into the SQL table.<br>
 
@@ -27,7 +28,7 @@ df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_
 2. `tablename`: desired name of the table 
 3. `schema`: desired sql schema
 4. `method`: option for "create" "append" or "upsert"
-5. `id_field`: id field of the table. Necessary if 4 is set to True
+5. `id_field`: id field of the table. Necessary if 4 is set to "upsert"
 
 ##### Upsert / create or append
 It is possible to upsert the SQL table with (new) records, if present in the dataframe you want to upload.
@@ -37,7 +38,7 @@ The new records will be uploaded and appended to the current SQL table.
 
 # Settings
 To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your environment variables.
-We recommend to work with `.env` files and load them in during runtime. But this is optional and they can be set as system variables as well.
+We recommend to work with `.env` files (or even better Azure Keyvault) and load them in during runtime. But this is optional and they can be set as system variables as well.
 Use the following template when using `.env`
 
 ```text
@@ -62,9 +63,6 @@ ls_sql_server_name: ""
 ls_sql_database_name: ""
 ls_sql_database_user: ""
 ls_sql_database_password: ""
-
-# pipeline settings
-trigger : True
 
 # --- AZURE SETTINGS ---
 # azure credentials for connecting to azure subscription.
