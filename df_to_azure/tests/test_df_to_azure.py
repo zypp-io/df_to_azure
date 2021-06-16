@@ -403,7 +403,11 @@ def test_empty_dataframe():
 
     with pytest.raises(SystemExit):
         df_to_azure(
-            df=df, tablename="empty_dataframe", schema="test", method="create", wait_till_finished=True
+            df=df,
+            tablename="empty_dataframe",
+            schema="test",
+            method="create",
+            wait_till_finished=True,
         )
 
 
