@@ -2,6 +2,8 @@ import logging
 from .export import run as df_to_azure
 from .export import run_multiple as dfs_to_azure
 
+__version__ = "0.4.0"
+
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d [%(levelname)-5s] [%(name)s] - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
