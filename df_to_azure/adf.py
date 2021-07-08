@@ -79,12 +79,13 @@ def create_blob_service_client():
     return blob_service_client
 
 
-def create_blob_container():
+def create_blob_container(container_name: str):
     blob_service_client = create_blob_service_client()
-    try:
-        blob_service_client.create_container("dftoazure")
-    except:
-        logging.info("CreateContainerError: Container already exists.")
+    containers = [x.get("name") for x in blob_service_client.list_containers()]
+    if container_name not in containers:
+        blob_service_client.create_container(name=container_name)
+    else:
+        logging.debug(f"Container {container_name} already exists.")
 
 
 def create_linked_service_sql():
