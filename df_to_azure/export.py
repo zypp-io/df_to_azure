@@ -42,12 +42,12 @@ def run_multiple(
         # azure components
         adf.create_resourcegroup()
         adf.create_datafactory()
-        adf.create_blob_container()
 
         # linked services
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
 
+    adf.create_blob_container(container_name="dftoazure")
     for table in tables:
 
         upload_dataset(table)
@@ -82,12 +82,11 @@ def run(
         # azure components
         adf.create_resourcegroup()
         adf.create_datafactory()
-        adf.create_blob_container()
 
         # linked services
         adf.create_linked_service_sql()
         adf.create_linked_service_blob()
-
+    adf.create_blob_container(container_name="dftoazure")
     upload_dataset(table)
     adf.create_input_blob(table)
     adf.create_output_sql(table)
