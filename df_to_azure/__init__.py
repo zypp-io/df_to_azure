@@ -1,6 +1,5 @@
 import logging
-from .export import run as df_to_azure
-from .export import run_multiple as dfs_to_azure
+from .export import df_to_azure
 
 __version__ = "0.4.0"
 

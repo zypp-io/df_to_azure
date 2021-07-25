@@ -6,7 +6,7 @@ from numpy import array, nan
 from pandas._testing import assert_frame_equal
 from keyvault import secrets_to_environment
 
-from df_to_azure import df_to_azure, dfs_to_azure
+from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
 
 
@@ -223,20 +223,6 @@ def test_append():
 # #######################
 # #### GENERAL TESTS ####
 # #######################
-def test_run_multiple(file_dir="data"):
-
-    df_dict = dict()
-    for file in os.listdir(file_dir):
-        if file.endswith(".csv"):
-            df_dict[file.split(".csv")[0]] = read_csv(os.path.join(file_dir, file))
-
-    dfs_to_azure(
-        df_dict,
-        schema="test",
-        method="create",
-        wait_till_finished=True,
-    )
-
 
 def test_mapping_column_types():
     """
@@ -471,7 +457,7 @@ def test_clean_up_db():
 
 if __name__ == "__main__":
     file_dir_run = "../data"
-    # test_create_sample(file_dir_run)
+    test_create_sample(file_dir_run)
     # test_upsert_sample(file_dir_run)
     # test_create_category(file_dir_run)
     # test_upsert_category(file_dir_run)
@@ -485,7 +471,7 @@ if __name__ == "__main__":
     # test_long_string()
     # test_quote_char()
     # test_pipeline_name()
-    test_empty_dataframe()
+    # test_empty_dataframe()
     # test_convert_bigint()
 
     # RUN AS LAST FUNCTION

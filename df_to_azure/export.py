@@ -6,12 +6,12 @@ import sys
 import logging
 from df_to_azure.adf import create_blob_service_client
 import df_to_azure.adf as adf
-from df_to_azure.parse_settings import TableParameters
+from df_to_azure.settings import TableParameters
 from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
-from df_to_azure.functions import wait_until_pipeline_is_done
+from df_to_azure.utils import wait_until_pipeline_is_done
 
 
-def run(
+def df_to_azure(
     df,
     tablename,
     schema,
@@ -94,7 +94,7 @@ def push_to_azure(table):
             dtype=col_types,
         )
 
-    logging.info(f"created {table.df.shape[1]} columns in {table.schema}.{table.name}.")
+    logging.info(f"Created {table.df.shape[1]} columns in {table.schema}.{table.name}.")
 
 
 def upload_to_blob(table):
@@ -105,7 +105,6 @@ def upload_to_blob(table):
     )
 
     data = table.df.to_csv(index=False, sep="^", quotechar='"', line_terminator="\n")
-
     blob_client.upload_blob(data, overwrite=True)
 
 
