@@ -16,9 +16,7 @@ class SqlUpsert:
         return on
 
     def create_update_statement(self):
-        update = ", ".join(
-            [f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols]
-        )
+        update = ", ".join([f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols])
         return update
 
     def create_insert_statement(self):

@@ -34,4 +34,4 @@ jobs:
         # pytest
     - name: Python Black Check
       run: |
-        black --line-length=100 --check df_to_azure
+        black --line-length=120 --check df_to_azure

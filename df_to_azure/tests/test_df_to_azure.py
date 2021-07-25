@@ -224,6 +224,7 @@ def test_append():
 # #### GENERAL TESTS ####
 # #######################
 
+
 def test_mapping_column_types():
     """
     Test if the mapping of the pandas column types to SQL column types goes correctly.

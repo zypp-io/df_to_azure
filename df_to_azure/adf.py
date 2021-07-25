@@ -1,6 +1,9 @@
 import logging
 import os
+from pandas import DataFrame
+from typing import Union
 from df_to_azure.utils import print_item
+from df_to_azure.settings import TableParameters
 from azure.mgmt.datafactory.models import (
     ActivityDependency,
     Factory,
@@ -25,17 +28,23 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.storage.blob import BlobServiceClient
 
 
-class ADF:
-    def __init__(self, table_name, table_schema, table_method):
+class ADF(TableParameters):
+    def __init__(
+        self,
+        df: DataFrame,
+        table_name: str,
+        schema: str,
+        method: str,
+        id_field: Union[str, list],
+        cwd: str,
+    ):
+        super().__init__(df, table_name, schema, method, id_field, cwd)
         self.credentials = self.create_credentials()
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
         self.df_name = os.environ.get("df_name")
         self.ls_sql_name = os.environ.get("ls_sql_name")
         self.ls_blob_name = os.environ.get("ls_blob_name")
-        self.table_name = table_name
-        self.table_schema = table_schema
-        self.table_method = table_method
 
     @staticmethod
     def create_credentials():
@@ -65,9 +74,7 @@ class ADF:
     def create_datafactory(self):
         df_resource = Factory(location=os.environ.get("rg_location"))
         adf_client = self.adf_client()
-        df = adf_client.factories.create_or_update(
-            self.rg_name, self.df_name, df_resource
-        )
+        df = adf_client.factories.create_or_update(self.rg_name, self.df_name, df_resource)
         print_item(df)
 
         while df.provisioning_state != "Succeeded":
@@ -112,7 +119,7 @@ class ADF:
             value=f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
             f";AccountKey={os.environ.get('ls_blob_account_key')}"
         )
-    
+
         ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
         self.adf_client().linked_services.create_or_update(
             self.rg_name,
@@ -141,9 +148,7 @@ class ADF:
             },
         )
         ds_azure_blob = DatasetResource(properties=ds_azure_blob)
-        self.adf_client().datasets.create_or_update(
-            self.rg_name, self.df_name, ds_name, ds_azure_blob
-        )
+        self.adf_client().datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
 
     def create_output_sql(self):
 
@@ -152,32 +157,26 @@ class ADF:
         ds_ls = LinkedServiceReference(reference_name=self.ls_sql_name)
         data_azure_sql = AzureSqlTableDataset(
             linked_service_name=ds_ls,
-            table_name=f"{self.table_schema}.{self.table_name}",
+            table_name=f"{self.schema}.{self.table_name}",
         )
         data_azure_sql = DatasetResource(properties=data_azure_sql)
-        self.adf_client().datasets.create_or_update(
-            self.rg_name, self.df_name, ds_name, data_azure_sql
-        )
+        self.adf_client().datasets.create_or_update(self.rg_name, self.df_name, ds_name, data_azure_sql)
 
     def create_pipeline(self, pipeline_name):
 
         activities = [self.create_copy_activity()]
         # If user wants to upsert, we append stored procedure activity to pipeline.
-        if self.table_method == "upsert":
+        if self.method == "upsert":
             activities.append(self.stored_procedure_activity())
         # Create a pipeline with the copy activity
         if not pipeline_name:
-            pipeline_name = f"{self.table_schema} {self.table_name} to SQL"
+            pipeline_name = f"{self.schema} {self.table_name} to SQL"
         params_for_pipeline = {}
         p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
-        self.adf_client().pipelines.create_or_update(
-            self.rg_name, self.df_name, pipeline_name, p_obj
-        )
+        self.adf_client().pipelines.create_or_update(self.rg_name, self.df_name, pipeline_name, p_obj)
 
         logging.info(f"Triggering pipeline run for {self.table_name}!")
-        run_response = self.adf_client().pipelines.create_run(
-            self.rg_name, self.df_name, pipeline_name, parameters={}
-        )
+        run_response = self.adf_client().pipelines.create_run(self.rg_name, self.df_name, pipeline_name, parameters={})
 
         return adf_client, run_response
 

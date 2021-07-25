@@ -21,9 +21,7 @@ def df_to_azure(
     wait_till_finished=False,
     pipeline_name=None,
 ):
-    table = TableParameters(
-        df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd
-    )
+    table = TableParameters(df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd)
     create = True if os.environ.get("create") == "True" else False
     if create:
         create_schema(table)
@@ -191,9 +189,7 @@ def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: in
         pd.BooleanDtype(): Boolean(),
     }
 
-    col_types = {
-        col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()
-    }
+    col_types = {col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()}
 
     return col_types
 
