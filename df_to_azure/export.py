@@ -1,12 +1,14 @@
+import logging
+import sys
+from typing import Union
+
 import pandas as pd
 from numpy import dtype
 from pandas import DataFrame
-from typing import Union
-from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric, BigInteger
-import sys
-import logging
+from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
+
 from df_to_azure.adf import ADF
-from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns, execute_stmt
+from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt, test_uniqueness_columns
 from df_to_azure.utils import wait_until_pipeline_is_done
 
 

@@ -1,14 +1,14 @@
-import os
 import logging
+import os
+
 import pytest
-from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
-from numpy import array, nan
-from pandas._testing import assert_frame_equal
 from keyvault import secrets_to_environment
+from numpy import array, nan
+from pandas import DataFrame, Series, concat, date_range, read_csv, read_sql_query, read_sql_table
+from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
-
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")

@@ -1,5 +1,6 @@
-from pandas import DataFrame
 from typing import Union
+
+from pandas import DataFrame
 
 
 class TableParameters:
