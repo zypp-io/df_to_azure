@@ -33,19 +33,22 @@ class ADF(TableParameters):
     def __init__(
         self,
         df: DataFrame,
-        table_name: str,
+        tablename: str,
         schema: str,
-        method: str,
-        id_field: Union[str, list],
-        cwd: str,
+        method: str = "create",
+        id_field: Union[str, list] = None,
+        pipeline_name: str = None,
     ):
-        super().__init__(df, table_name, schema, method, id_field, cwd)
+        super().__init__(df, tablename, schema, method, id_field)
         self.credentials = self.create_credentials()
+        self.adf_client = self.adf_client()
+        self.pipeline_name = pipeline_name
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
         self.df_name = os.environ.get("df_name")
         self.ls_sql_name = os.environ.get("ls_sql_name")
         self.ls_blob_name = os.environ.get("ls_blob_name")
+        self.create = True if os.environ.get("create") == "True" else False
 
     @staticmethod
     def check_env_variables():
@@ -60,22 +63,27 @@ class ADF(TableParameters):
             "AZURE_CLIENT_ID",
             "AZURE_CLIENT_SECRET",
             "AZURE_TENANT_ID",
+            "SQL_DB",
+            "SQL_PWSQL_SERVER",
+            "SQL_USER",
+            "create",
             "df_name",
             "ls_blob_account_key",
             "ls_blob_account_name",
             "ls_blob_name",
             "ls_sql_database_name",
-            "ls_sql_database_passwordrg_name",
+            "ls_sql_database_password",
             "ls_sql_database_user",
             "ls_sql_name",
             "ls_sql_server_name",
             "rg_location",
+            "rg_name",
             "subscription_id",
         ]
         not_set = [env for env in required_env_vars if os.environ.get(env) is None]
 
         if not_set:
-            raise EnvVariableNotSetError(f"The following required variable(s) not set: {', '.join(not_set)}")
+            raise EnvVariableNotSetError(f"The following required variable(s) are not set: {', '.join(not_set)}")
 
     @staticmethod
     def create_credentials():
@@ -104,12 +112,11 @@ class ADF(TableParameters):
 
     def create_datafactory(self):
         df_resource = Factory(location=os.environ.get("rg_location"))
-        adf_client = self.adf_client()
-        df = adf_client.factories.create_or_update(self.rg_name, self.df_name, df_resource)
+        df = self.adf_client.factories.create_or_update(self.rg_name, self.df_name, df_resource)
         print_item(df)
 
         while df.provisioning_state != "Succeeded":
-            df = adf_client.factories.get(self.rg_name, self.df_name)
+            df = self.adf_client.factories.get(self.rg_name, self.df_name)
             logging.info(f"Datafactory {os.environ.get('df_name')} created!")
 
     def blob_service_client(self):
@@ -138,7 +145,7 @@ class ADF(TableParameters):
 
         ls_azure_sql = AzureSqlDatabaseLinkedService(connection_string=conn_string)
 
-        self.adf_client().linked_services.create_or_update(
+        self.adf_client.linked_services.create_or_update(
             self.rg_name,
             self.df_name,
             self.ls_sql_name,
@@ -152,14 +159,13 @@ class ADF(TableParameters):
         )
 
         ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
-        self.adf_client().linked_services.create_or_update(
+        self.adf_client.linked_services.create_or_update(
             self.rg_name,
             self.df_name,
             self.ls_blob_name,
             ls_azure_blob,
         )
 
-    # TODO: fix table
     def create_input_blob(self):
         ds_name = f"BLOB_dftoazure_{self.table_name}"
 
@@ -179,7 +185,7 @@ class ADF(TableParameters):
             },
         )
         ds_azure_blob = DatasetResource(properties=ds_azure_blob)
-        self.adf_client().datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
+        self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
 
     def create_output_sql(self):
 
@@ -191,7 +197,7 @@ class ADF(TableParameters):
             table_name=f"{self.schema}.{self.table_name}",
         )
         data_azure_sql = DatasetResource(properties=data_azure_sql)
-        self.adf_client().datasets.create_or_update(self.rg_name, self.df_name, ds_name, data_azure_sql)
+        self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, data_azure_sql)
 
     def create_pipeline(self, pipeline_name):
 
@@ -204,12 +210,12 @@ class ADF(TableParameters):
             pipeline_name = f"{self.schema} {self.table_name} to SQL"
         params_for_pipeline = {}
         p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
-        self.adf_client().pipelines.create_or_update(self.rg_name, self.df_name, pipeline_name, p_obj)
+        self.adf_client.pipelines.create_or_update(self.rg_name, self.df_name, pipeline_name, p_obj)
 
         logging.info(f"Triggering pipeline run for {self.table_name}!")
-        run_response = self.adf_client().pipelines.create_run(self.rg_name, self.df_name, pipeline_name, parameters={})
+        run_response = self.adf_client.pipelines.create_run(self.rg_name, self.df_name, pipeline_name, parameters={})
 
-        return adf_client, run_response
+        return run_response
 
     def create_copy_activity(self):
         act_name = f"Copy {self.table_name} to SQL"

@@ -76,3 +76,21 @@ def auth_azure():
     con = create_engine(connection_string).connect()
 
     return con
+
+
+def execute_stmt(stmt: str):
+    """
+    Execute SQL query
+
+    Parameters
+    ----------
+    stmt: str
+        SQL query statement.
+    Returns
+    -------
+
+    """
+    with auth_azure() as con:
+        t = con.begin()
+        con.execute(stmt)
+        t.commit()

@@ -10,14 +10,12 @@ class TableParameters:
         schema: str,
         method: str,
         id_field: Union[str, list],
-        cwd: str,
     ):
         self.df = df
         self.table_name = table_name
         self.schema = schema
         self.method = method
         self.id_field = [id_field] if isinstance(id_field, str) else id_field
-        self.cwd = cwd
         # checks
         self.check_method()
         self.check_upsert()
