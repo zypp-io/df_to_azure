@@ -2,9 +2,8 @@ import logging
 import sys
 from typing import Union
 
-import pandas as pd
 from numpy import dtype
-from pandas import DataFrame
+from pandas import BooleanDtype, DataFrame, Int64Dtype, StringDtype
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
 from df_to_azure.adf import ADF
@@ -151,7 +150,7 @@ class DfToAzure(ADF):
 
         Parameters
         ----------
-        self.df: pd.DataFrame
+        self.df: DataFrame
             DataFrame to convert timedelta columns to seconds
 
         """
@@ -173,18 +172,18 @@ class DfToAzure(ADF):
         numeric = Numeric(precision=18, scale=self.decimal_precision)
         type_conversion = {
             dtype("O"): string,
-            pd.StringDtype(): string,
+            StringDtype(): string,
             dtype("int64"): Integer(),
             dtype("int32"): Integer(),
             dtype("int16"): Integer(),
             dtype("int8"): Integer(),
-            pd.Int64Dtype(): Integer(),
+            Int64Dtype(): Integer(),
             dtype("float64"): numeric,
             dtype("float32"): numeric,
             dtype("float16"): numeric,
             dtype("<M8[ns]"): DateTime(),
             dtype("bool"): Boolean(),
-            pd.BooleanDtype(): Boolean(),
+            BooleanDtype(): Boolean(),
         }
 
         col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}
