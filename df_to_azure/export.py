@@ -11,57 +11,6 @@ from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
 from df_to_azure.functions import wait_until_pipeline_is_done
 
 
-def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
-    tables = []
-    for name, df in df_dict.items():
-        table = TableParameters(
-            df=df, name=name, schema=schema, method=method, id_field=id_field, cwd=cwd
-        )
-
-        tables.append(table)
-
-    return tables
-
-
-def run_multiple(
-    df_dict,
-    schema,
-    method="create",
-    id_field=None,
-    cwd=None,
-    wait_till_finished=False,
-    pipeline_name=False,
-):
-
-    tables = table_list(df_dict, schema, method, id_field, cwd)
-
-    create = True if os.environ.get("create") == "True" else False
-    if create:
-        create_schema(tables[0])
-
-        # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-        adf.create_blob_container()
-
-        # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
-
-    for table in tables:
-
-        upload_dataset(table)
-        adf.create_input_blob(table)
-        adf.create_output_sql(table)
-
-    # pipelines
-    adf_client, run_response = adf.create_multiple_activity_pipeline(tables, p_name=pipeline_name)
-    if wait_till_finished:
-        wait_until_pipeline_is_done(adf_client, run_response)
-
-    return adf_client, run_response
-
-
 def run(
     df,
     tablename,
@@ -162,18 +111,23 @@ def upload_to_blob(table):
 
 def create_schema(table):
     query = f"""
-    IF NOT EXISTS ( SELECT  *
-                FROM    sys.schemas
-                WHERE   name = N'{table.schema}' )
+    IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'{table.schema}')
     EXEC('CREATE SCHEMA [{table.schema}]');
     """
     execute_stmt(query)
 
 
-def execute_stmt(stmt):
+def execute_stmt(stmt: str):
     """
-    :param stmt: SQL statement to be executed
-    :return: executes the statment
+    Execute SQL query
+
+    Parameters
+    ----------
+    stmt: str
+        SQL query statement.
+    Returns
+    -------
+
     """
     with auth_azure() as con:
         t = con.begin()
