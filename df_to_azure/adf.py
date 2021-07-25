@@ -2,6 +2,7 @@ import logging
 import os
 from pandas import DataFrame
 from typing import Union
+from df_to_azure.exceptions import EnvVariableNotSetError
 from df_to_azure.utils import print_item
 from df_to_azure.settings import TableParameters
 from azure.mgmt.datafactory.models import (
@@ -45,6 +46,36 @@ class ADF(TableParameters):
         self.df_name = os.environ.get("df_name")
         self.ls_sql_name = os.environ.get("ls_sql_name")
         self.ls_blob_name = os.environ.get("ls_blob_name")
+
+    @staticmethod
+    def check_env_variables():
+        """
+        Check if the required environment variables are set.
+
+        Returns
+        -------
+
+        """
+        required_env_vars = [
+            "AZURE_CLIENT_ID",
+            "AZURE_CLIENT_SECRET",
+            "AZURE_TENANT_ID",
+            "df_name",
+            "ls_blob_account_key",
+            "ls_blob_account_name",
+            "ls_blob_name",
+            "ls_sql_database_name",
+            "ls_sql_database_passwordrg_name",
+            "ls_sql_database_user",
+            "ls_sql_name",
+            "ls_sql_server_name",
+            "rg_location",
+            "subscription_id",
+        ]
+        not_set = [env for env in required_env_vars if os.environ.get(env) is None]
+
+        if not_set:
+            raise EnvVariableNotSetError(f"The following required variable(s) not set: {', '.join(not_set)}")
 
     @staticmethod
     def create_credentials():
