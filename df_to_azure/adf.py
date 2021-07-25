@@ -26,7 +26,7 @@ from azure.storage.blob import BlobServiceClient
 
 
 class ADF:
-    def __init__(self, table_name, table_schema):
+    def __init__(self, table_name, table_schema, table_method):
         self.credentials = self.create_credentials()
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
@@ -35,6 +35,7 @@ class ADF:
         self.ls_blob_name = os.environ.get("ls_blob_name")
         self.table_name = table_name
         self.table_schema = table_schema
+        self.table_method = table_method
 
     @staticmethod
     def create_credentials():
@@ -158,83 +159,57 @@ class ADF:
             self.rg_name, self.df_name, ds_name, data_azure_sql
         )
 
-    def create_pipeline(self):
+    def create_pipeline(self, pipeline_name):
 
-        activities = [create_copy_activity(table)]
+        activities = [self.create_copy_activity()]
         # If user wants to upsert, we append stored procedure activity to pipeline.
-        if table.method == "upsert":
-            activities.append(stored_procedure_activity(table.name))
+        if self.table_method == "upsert":
+            activities.append(self.stored_procedure_activity())
         # Create a pipeline with the copy activity
-        if not p_name:
-            p_name = f"{table.schema} {table.name} to SQL"
+        if not pipeline_name:
+            pipeline_name = f"{self.table_schema} {self.table_name} to SQL"
         params_for_pipeline = {}
         p_obj = PipelineResource(activities=activities, parameters=params_for_pipeline)
         self.adf_client().pipelines.create_or_update(
-            self.rg_name, self.df_name, p_name, p_obj
+            self.rg_name, self.df_name, pipeline_name, p_obj
         )
 
-        logging.info(f"Triggering pipeline run for {table.name}!")
-        run_response = adf_client.pipelines.create_run(
-            self.rg_name, self.df_name, p_name, parameters={}
+        logging.info(f"Triggering pipeline run for {self.table_name}!")
+        run_response = self.adf_client().pipelines.create_run(
+            self.rg_name, self.df_name, pipeline_name, parameters={}
         )
 
         return adf_client, run_response
 
+    def create_copy_activity(self):
+        act_name = f"Copy {self.table_name} to SQL"
+        blob_source = BlobSource()
+        sql_sink = SqlSink()
 
-def create_copy_activity(table):
-    act_name = f"Copy {table.name} to SQL"
-    blob_source = BlobSource()
-    sql_sink = SqlSink()
+        ds_in_ref = DatasetReference(reference_name=f"BLOB_dftoazure_{self.table_name}")
+        ds_out_ref = DatasetReference(reference_name=f"SQL_dftoazure_{self.table_name}")
+        copy_activity = CopyActivity(
+            name=act_name,
+            inputs=[ds_in_ref],
+            outputs=[ds_out_ref],
+            source=blob_source,
+            sink=sql_sink,
+        )
 
-    ds_in_ref = DatasetReference(reference_name=f"BLOB_dftoazure_{table.name}")
-    ds_out_ref = DatasetReference(reference_name=f"SQL_dftoazure_{table.name}")
-    copy_activity = CopyActivity(
-        name=act_name,
-        inputs=[ds_in_ref],
-        outputs=[ds_out_ref],
-        source=blob_source,
-        sink=sql_sink,
-    )
+        return copy_activity
 
-    return copy_activity
+    def stored_procedure_activity(self):
+        dependency_condition = DependencyCondition("Succeeded")
+        dependency = ActivityDependency(
+            activity=f"Copy {self.table_name} to SQL", dependency_conditions=[dependency_condition]
+        )
+        linked_service_reference = LinkedServiceReference(reference_name=self.ls_sql_name)
+        activity = SqlServerStoredProcedureActivity(
+            stored_procedure_name=f"UPSERT_{self.table_name}",
+            name="UPSERT procedure",
+            description="Trigger UPSERT procedure in SQL",
+            depends_on=[dependency],
+            linked_service_name=linked_service_reference,
+        )
 
-
-def create_multiple_activity_pipeline(tables, p_name):
-
-    copy_activities = list()
-    for table in tables:
-        copy_activities.append(create_copy_activity(table))
-
-    # Create a pipeline with the copy activity
-    if not p_name:
-        p_name = "DF_TO_AZURE to SQL"
-    params_for_pipeline = {}
-    p_obj = PipelineResource(activities=copy_activities, parameters=params_for_pipeline)
-    adf_client = create_adf_client()
-    adf_client.pipelines.create_or_update(
-        self.rg_name, self.df_name, p_name, p_obj
-    )
-
-    logging.info("triggering pipeline run for df_to_azure!")
-    run_response = adf_client.pipelines.create_run(
-        self.rg_name, self.df_name, p_name, parameters={}
-    )
-
-    return adf_client, run_response
-
-
-def stored_procedure_activity(table_name):
-    dependency_condition = DependencyCondition("Succeeded")
-    dependency = ActivityDependency(
-        activity=f"Copy {table_name} to SQL", dependency_conditions=[dependency_condition]
-    )
-    linked_service_reference = LinkedServiceReference(reference_name=self.ls_sql_name)
-    activity = SqlServerStoredProcedureActivity(
-        stored_procedure_name=f"UPSERT_{table_name}",
-        name="UPSERT procedure",
-        description="Trigger UPSERT procedure in SQL",
-        depends_on=[dependency],
-        linked_service_name=linked_service_reference,
-    )
-
-    return activity
+        return activity
