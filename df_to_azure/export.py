@@ -3,11 +3,9 @@ from numpy import dtype
 from pandas import DataFrame
 from typing import Union
 from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric, BigInteger
-import os
 import sys
 import logging
 from df_to_azure.adf import ADF
-import df_to_azure.adf as adf
 from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns, execute_stmt
 from df_to_azure.utils import wait_until_pipeline_is_done
 
@@ -199,7 +197,7 @@ class DfToAzure(ADF):
         if not df.empty:
             for col in df.columns:
                 len_col = df[col].astype(str).str.len().max()
-                if len_col > default_len:
+                if default_len < len_col < 8000:
                     update_dict_len[col] = String(length=int(len_col))
                 elif len_col > 8000:
                     update_dict_len[col] = String(length=None)
