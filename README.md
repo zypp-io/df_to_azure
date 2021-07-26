@@ -1,4 +1,4 @@
-<div style="text-align:center"><img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png" width="200"></div>
+<div style="text-align:center"><img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png" width="200"></div><br>
 
 [![Downloads](https://pepy.tech/badge/df-to-azure)](https://pepy.tech/project/df-to-azure)
 [![DownloadsMonth](https://pepy.tech/badge/df-to-azure/month)](https://pepy.tech/project/df-to-azure)
