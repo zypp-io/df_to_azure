@@ -2,6 +2,7 @@
 
 [![Downloads](https://pepy.tech/badge/df-to-azure)](https://pepy.tech/project/df-to-azure)
 [![DownloadsMonth](https://pepy.tech/badge/df-to-azure/month)](https://pepy.tech/project/df-to-azure)
+[![Size](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)
 
 # DF to Azure
 
