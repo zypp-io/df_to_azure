@@ -6,7 +6,7 @@
 
 # DF to Azure
 
-> Python module for fast upload of pandas DataFrame to azure using automatic created pipelines in Azure Data Factory.
+> Python module for fast upload of pandas DataFrame to Azure SQL Database using automatic created pipelines in Azure Data Factory.
 
 ## Introduction
 
@@ -32,7 +32,7 @@ df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_
 2. `tablename`: desired name of the table
 3. `schema`: desired sql schema
 4. `method`: option for "create" "append" or "upsert"
-5. `id_field`: id field of the table. Necessary if 4 is set to "upsert"
+5. `id_field`: id field of the table. Necessary if `method` is set to "upsert"
 
 **Important**: the csv's are uploaded to a container called `dftoazure`, so create this in your storage account before using this module.
 
@@ -78,7 +78,7 @@ tenant : ""
 subscription_id : ""
 ```
 
-## Maintained by Zypp:
+## Maintained by [Zypp](https://github.com/zypp-io):
 - [Melvin Folkers](https://github.com/melvinfolkers)
 - [Erfan Nariman](https://github.com/erfannariman)
 
