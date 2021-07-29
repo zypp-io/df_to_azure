@@ -49,8 +49,6 @@ Use the following template when using `.env`
 
 ```text
 # --- ADF SETTINGS ---
-# general run settings
-create="False"
 
 # data factory settings
 rg_name : ""
@@ -65,10 +63,10 @@ ls_blob_account_key : ""
 
 # SQL settings
 ls_sql_name : "Python SQL Linked Service"
-ls_sql_server_name: ""
-ls_sql_database_name: ""
-ls_sql_database_user: ""
-ls_sql_database_password: ""
+SQL_SERVER: ""
+SQL_DB: ""
+SQL_USER: ""
+SQL_PW: ""
 
 # --- AZURE SETTINGS ---
 # azure credentials for connecting to azure subscription.
