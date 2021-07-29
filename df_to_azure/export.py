@@ -1,276 +1,232 @@
-import pandas as pd
-from numpy import dtype
-from sqlalchemy.types import Boolean, DateTime, Integer, String, Numeric, BigInteger
-import os
-import sys
 import logging
-from df_to_azure.adf import create_blob_service_client
-import df_to_azure.adf as adf
-from df_to_azure.parse_settings import TableParameters
-from df_to_azure.db import SqlUpsert, auth_azure, test_uniqueness_columns
-from df_to_azure.functions import wait_until_pipeline_is_done
+import sys
+from typing import Union
+
+from numpy import dtype
+from pandas import BooleanDtype, DataFrame, Int64Dtype, StringDtype
+from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
+
+from df_to_azure.adf import ADF
+from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt, test_uniqueness_columns
+from df_to_azure.utils import wait_until_pipeline_is_done
 
 
-def table_list(df_dict: dict, schema: str, method: str, id_field: str, cwd: str) -> list:
-    tables = []
-    for name, df in df_dict.items():
-        table = TableParameters(
-            df=df, name=name, schema=schema, method=method, id_field=id_field, cwd=cwd
-        )
-
-        tables.append(table)
-
-    return tables
-
-
-def run_multiple(
-    df_dict,
-    schema,
-    method="create",
-    id_field=None,
-    cwd=None,
-    wait_till_finished=False,
-    pipeline_name=False,
-):
-
-    tables = table_list(df_dict, schema, method, id_field, cwd)
-
-    create = True if os.environ.get("create") == "True" else False
-    if create:
-        create_schema(tables[0])
-
-        # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-
-        # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
-
-    adf.create_blob_container(container_name="dftoazure")
-    for table in tables:
-
-        upload_dataset(table)
-        adf.create_input_blob(table)
-        adf.create_output_sql(table)
-
-    # pipelines
-    adf_client, run_response = adf.create_multiple_activity_pipeline(tables, p_name=pipeline_name)
-    if wait_till_finished:
-        wait_until_pipeline_is_done(adf_client, run_response)
-
-    return adf_client, run_response
-
-
-def run(
+def df_to_azure(
     df,
     tablename,
     schema,
     method="create",
     id_field=None,
-    cwd=None,
     wait_till_finished=False,
     pipeline_name=None,
+    text_length=255,
+    decimal_precision=2,
+    create=False,
 ):
-    table = TableParameters(
-        df=df, name=tablename, schema=schema, method=method, id_field=id_field, cwd=cwd
-    )
-    create = True if os.environ.get("create") == "True" else False
-    if create:
-        create_schema(table)
-
-        # azure components
-        adf.create_resourcegroup()
-        adf.create_datafactory()
-
-        # linked services
-        adf.create_linked_service_sql()
-        adf.create_linked_service_blob()
-    adf.create_blob_container(container_name="dftoazure")
-    upload_dataset(table)
-    adf.create_input_blob(table)
-    adf.create_output_sql(table)
-
-    # pipelines
-    adf_client, run_response = adf.create_pipeline(table, pipeline_name)
-    if wait_till_finished:
-        wait_until_pipeline_is_done(adf_client, run_response)
+    adf_client, run_response = DfToAzure(
+        df=df,
+        tablename=tablename,
+        schema=schema,
+        method=method,
+        id_field=id_field,
+        wait_till_finished=wait_till_finished,
+        pipeline_name=pipeline_name,
+        text_length=text_length,
+        decimal_precision=decimal_precision,
+        create=create,
+    ).run()
 
     return adf_client, run_response
 
 
-def upload_dataset(table):
-
-    if table.df.empty:
-        logging.info("Data empty, no new records to upload.")
-        sys.exit(1)
-
-    if table.method == "create":
-        create_schema(table)
-        push_to_azure(table)
-    if table.method == "upsert":
-        # key columns have to be unique for upsert.
-        test_uniqueness_columns(table.df, table.id_field)
-        upsert = SqlUpsert(
-            table_name=table.name,
-            schema=table.schema,
-            id_cols=table.id_field,
-            columns=table.df.columns,
+class DfToAzure(ADF):
+    def __init__(
+        self,
+        df: DataFrame,
+        tablename: str,
+        schema: str,
+        method: str = "create",
+        id_field: Union[str, list] = None,
+        pipeline_name: str = None,
+        wait_till_finished: bool = False,
+        text_length: int = 255,
+        decimal_precision: int = 2,
+        create: bool = False,
+    ):
+        super().__init__(
+            df=df,
+            tablename=tablename,
+            schema=schema,
+            method=method,
+            id_field=id_field,
+            pipeline_name=pipeline_name,
+            create=create,
         )
-        upsert.create_stored_procedure()
-        table.schema = "staging"
-        create_schema(table)
-        push_to_azure(table)
+        self.wait_till_finished = wait_till_finished
+        self.text_length = text_length
+        self.decimal_precision = decimal_precision
 
-    upload_to_blob(table)
-    logging.info(f"Finished exporting {table.df.shape[0]} records to Azure Blob Storage.")
+    def run(self):
+        if self.create:
 
+            # azure components
+            self.create_resourcegroup()
+            self.create_datafactory()
+            self.create_blob_container()
 
-def push_to_azure(table):
-    table.df = convert_timedelta_to_seconds(table.df)
-    max_str = get_max_str_len(table.df)
-    bigint = check_for_bigint(table.df)
-    col_types = column_types(table.df)
-    for u in [max_str, bigint]:
-        col_types.update(u)
+            # linked services
+            self.create_linked_service_sql()
+            self.create_linked_service_blob()
 
-    with auth_azure() as con:
-        table.df.head(n=0).to_sql(
-            name=table.name,
-            con=con,
-            if_exists="replace",
-            index=False,
-            schema=table.schema,
-            dtype=col_types,
+        self.upload_dataset()
+        self.create_input_blob()
+        self.create_output_sql()
+
+        # pipelines
+        run_response = self.create_pipeline(pipeline_name=self.pipeline_name)
+        if self.wait_till_finished:
+            wait_until_pipeline_is_done(self.adf_client, run_response)
+
+        return self.adf_client, run_response
+
+    def upload_dataset(self):
+
+        if self.df.empty:
+            logging.info("Data empty, no new records to upload.")
+            sys.exit(1)
+
+        if self.method == "create":
+            self.create_schema()
+            self.push_to_azure()
+        if self.method == "upsert":
+            # key columns have to be unique for upsert.
+            test_uniqueness_columns(self.df, self.id_field)
+            upsert = SqlUpsert(
+                table_name=self.table_name,
+                schema=self.schema,
+                id_cols=self.id_field,
+                columns=self.df.columns,
+            )
+            upsert.create_stored_procedure()
+            self.schema = "staging"
+            self.create_schema()
+            self.push_to_azure()
+
+        self.upload_to_blob()
+        logging.info(f"Finished exporting {self.df.shape[0]} records to Azure Blob Storage.")
+
+    def push_to_azure(self):
+        self.convert_timedelta_to_seconds()
+        max_str = self.get_max_str_len()
+        bigint = self.check_for_bigint()
+        col_types = self.column_types()
+        for u in [max_str, bigint]:
+            col_types.update(u)
+
+        with auth_azure() as con:
+            self.df.head(n=0).to_sql(
+                name=self.table_name,
+                con=con,
+                if_exists="replace",
+                index=False,
+                schema=self.schema,
+                dtype=col_types,
+            )
+
+        logging.info(f"Created {self.df.shape[1]} columns in {self.schema}.{self.table_name}.")
+
+    def upload_to_blob(self):
+        blob_client = self.blob_service_client()
+        blob_client = blob_client.get_blob_client(
+            container="dftoazure",
+            blob=f"{self.table_name}/{self.table_name}.csv",
         )
 
-    logging.info(f"created {table.df.shape[1]} columns in {table.schema}.{table.name}.")
+        data = self.df.to_csv(index=False, sep="^", quotechar='"', line_terminator="\n")
+        blob_client.upload_blob(data, overwrite=True)
 
+    def create_schema(self):
+        query = f"""
+        IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'{self.schema}')
+        EXEC('CREATE SCHEMA [{self.schema}]');
+        """
+        execute_stmt(query)
 
-def upload_to_blob(table):
-    blob_client = create_blob_service_client()
-    blob_client = blob_client.get_blob_client(
-        container="dftoazure",
-        blob=f"{table.name}/{table.name}.csv",
-    )
+    def convert_timedelta_to_seconds(self):
+        """
+        We convert timedelta columns to seconds since this will error in SQL DB.
+        If there are no timedelta columns, nothing will happen.
 
-    data = table.df.to_csv(index=False, sep="^", quotechar='"', line_terminator="\n")
+        Parameters
+        ----------
+        self.df: DataFrame
+            DataFrame to convert timedelta columns to seconds
 
-    blob_client.upload_blob(data, overwrite=True)
+        """
+        td_cols = self.df.iloc[:1].select_dtypes("timedelta").columns
 
+        if len(td_cols):
+            self.df[td_cols] = self.df[td_cols].apply(lambda x: x.dt.total_seconds())
 
-def create_schema(table):
-    query = f"""
-    IF NOT EXISTS ( SELECT  *
-                FROM    sys.schemas
-                WHERE   name = N'{table.schema}' )
-    EXEC('CREATE SCHEMA [{table.schema}]');
-    """
-    execute_stmt(query)
+    def column_types(self) -> dict:
+        """
+        Convert pandas / numpy dtypes to SQLAlchemy dtypes when writing data to database.
 
+        Returns
+        -------
+        col_types: dict
+            Dictionary with mapping of pandas dtypes to SQLAlchemy types.
+        """
+        string = String(length=self.text_length)
+        numeric = Numeric(precision=18, scale=self.decimal_precision)
+        type_conversion = {
+            dtype("O"): string,
+            StringDtype(): string,
+            dtype("int64"): Integer(),
+            dtype("int32"): Integer(),
+            dtype("int16"): Integer(),
+            dtype("int8"): Integer(),
+            Int64Dtype(): Integer(),
+            dtype("float64"): numeric,
+            dtype("float32"): numeric,
+            dtype("float16"): numeric,
+            dtype("<M8[ns]"): DateTime(),
+            dtype("bool"): Boolean(),
+            BooleanDtype(): Boolean(),
+        }
 
-def execute_stmt(stmt):
-    """
-    :param stmt: SQL statement to be executed
-    :return: executes the statment
-    """
-    with auth_azure() as con:
-        t = con.begin()
-        con.execute(stmt)
-        t.commit()
+        col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}
 
+        return col_types
 
-def convert_timedelta_to_seconds(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    We convert timedelta columns to seconds since this will error in SQL DB.
-    If there are no timedelta columns, nothing will happen.
+    def get_max_str_len(self):
+        df = self.df.select_dtypes("object")
+        default_len = self.text_length
 
-    Parameters
-    ----------
-    df: pd.DataFrame
-        DataFrame to convert timedelta columns to seconds
+        update_dict_len = {}
+        if not df.empty:
+            for col in df.columns:
+                len_col = df[col].astype(str).str.len().max()
+                if default_len < len_col < 8000:
+                    update_dict_len[col] = String(length=int(len_col))
+                elif len_col > 8000:
+                    update_dict_len[col] = String(length=None)
+                else:
+                    update_dict_len[col] = String(length=default_len)
 
-    Returns
-    -------
-    df: pd.DataFrame
-        DataFrame where timedelta columns are converted to seconds.
-    """
-    td_cols = df.iloc[:1].select_dtypes("timedelta").columns
+        return update_dict_len
 
-    if len(td_cols):
-        df[td_cols] = df[td_cols].apply(lambda x: x.dt.total_seconds())
+    def check_for_bigint(self):
+        ints = self.df.select_dtypes(include=["int8", "int16", "int32", "int64"])
+        if ints.empty:
+            return {}
 
-    return df
+        # These are the highest and lowest number
+        # which can be stored in an integer column in SQL.
+        # For numbers out of these bounds, we convert to bigint
+        check = (ints.lt(-2147483648) | ints.gt(2147483647)).any()
+        cols_bigint = check[check].index.tolist()
 
+        update_dict_bigint = {col: BigInteger() for col in cols_bigint}
 
-def column_types(df: pd.DataFrame, text_length: int = 255, decimal_precision: int = 2) -> dict:
-    """
-    Convert pandas / numpy dtypes to SQLAlchemy dtypes when writing data to database.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        dataframe to write to SQL database
-    text_length: int
-        maximum length of text columns
-    decimal_precision: int
-        Decimal precision of float columns
-
-    Returns
-    -------
-    col_types: dict
-        Dictionary with mapping of pandas dtypes to SQLAlchemy types.
-    """
-    type_conversion = {
-        dtype("O"): String(length=text_length),
-        pd.StringDtype(): String(length=text_length),
-        dtype("int64"): Integer(),
-        dtype("int32"): Integer(),
-        dtype("int16"): Integer(),
-        dtype("int8"): Integer(),
-        pd.Int64Dtype(): Integer(),
-        dtype("float64"): Numeric(precision=18, scale=decimal_precision),
-        dtype("float32"): Numeric(precision=18, scale=decimal_precision),
-        dtype("float16"): Numeric(precision=18, scale=decimal_precision),
-        dtype("<M8[ns]"): DateTime(),
-        dtype("bool"): Boolean(),
-        pd.BooleanDtype(): Boolean(),
-    }
-
-    col_types = {
-        col_name: type_conversion[col_type] for col_name, col_type in df.dtypes.to_dict().items()
-    }
-
-    return col_types
-
-
-def get_max_str_len(df):
-    df = df.select_dtypes("object")
-    default_len = 255
-
-    update_dict_len = {}
-    if not df.empty:
-        for col in df.columns:
-            len_col = df[col].astype(str).str.len().max()
-            if len_col > default_len:
-                update_dict_len[col] = String(length=int(len_col))
-            if len_col > 8000:
-                update_dict_len[col] = String(length=None)
-
-    return update_dict_len
-
-
-def check_for_bigint(df):
-    ints = df.select_dtypes(include=["int8", "int16", "int32", "int64"])
-    if ints.empty:
-        return {}
-
-    # These are the highest and lowest number
-    # which can be stored in an integer column in SQL.
-    # For numbers out of these bounds, we convert to bigint
-    check = (ints.lt(-2147483648) | ints.gt(2147483647)).any()
-    cols_bigint = check[check].index.tolist()
-
-    update_dict_bigint = {col: BigInteger() for col in cols_bigint}
-
-    return update_dict_bigint
+        return update_dict_bigint

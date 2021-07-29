@@ -1,8 +1,14 @@
+class CreateContainerError(Exception):
+    pass
+
+
 class CreateSchemaError(Exception):
     pass
 
 
-class CreateContainerError(Exception):
+class EnvVariableNotSetError(Exception):
+    """Error when required env variable(s) is not set"""
+
     pass
 
 

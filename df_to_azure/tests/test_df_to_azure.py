@@ -1,14 +1,14 @@
-import os
 import logging
+import os
+
 import pytest
-from pandas import Series, DataFrame, read_csv, read_sql_table, date_range, read_sql_query, concat
-from numpy import array, nan
-from pandas._testing import assert_frame_equal
 from keyvault import secrets_to_environment
+from numpy import array, nan
+from pandas import DataFrame, Series, concat, date_range, read_csv, read_sql_query, read_sql_table
+from pandas._testing import assert_frame_equal
 
-from df_to_azure import df_to_azure, dfs_to_azure
+from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
-
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
@@ -26,6 +26,42 @@ This is the testing suite for df_to_azure. In general the following steps will b
 NOTE: To keep the testing lightweight, we don't import whole modules but just the methods we need.
         like DataFrame from pandas.
 """
+
+# #############################
+# #### CHECKS TESTS ####
+# #############################
+
+
+def test_wrong_method():
+    """
+    Not existing method
+    """
+    df = DataFrame()
+    with pytest.raises(ValueError):
+        df_to_azure(
+            df=df,
+            tablename="wrong_method",
+            schema="test",
+            method="insert",
+            wait_till_finished=True,
+        )
+
+
+def test_upsert_no_id_field():
+    """
+    When upsert method is used, id_field has to be given
+    """
+    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
+    with pytest.raises(ValueError):
+        df_to_azure(
+            df=df,
+            tablename="wrong_method",
+            schema="test",
+            method="insert",
+            id_field=None,
+            wait_till_finished=True,
+        )
+
 
 # #############################
 # #### CREATE METHOD TESTS ####
@@ -223,19 +259,6 @@ def test_append():
 # #######################
 # #### GENERAL TESTS ####
 # #######################
-def test_run_multiple(file_dir="data"):
-
-    df_dict = dict()
-    for file in os.listdir(file_dir):
-        if file.endswith(".csv"):
-            df_dict[file.split(".csv")[0]] = read_csv(os.path.join(file_dir, file))
-
-    dfs_to_azure(
-        df_dict,
-        schema="test",
-        method="create",
-        wait_till_finished=True,
-    )
 
 
 def test_mapping_column_types():
@@ -315,36 +338,6 @@ def test_mapping_column_types():
         result = read_sql_query(query, con=con)
 
     assert_frame_equal(expected, result)
-
-
-def test_wrong_method():
-    """
-    Not existing method
-    """
-    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
-    with pytest.raises(ValueError):
-        df_to_azure(
-            df=df,
-            tablename="wrong_method",
-            schema="test",
-            method="insert",
-            wait_till_finished=True,
-        )
-
-
-def test_upsert_no_id_field():
-    """
-    When upsert method is used, id_field has to be given
-    """
-    df = DataFrame({"A": [1, 2, 3], "B": list("abc"), "C": [4.0, 5.0, nan]})
-    with pytest.raises(ValueError):
-        df_to_azure(
-            df=df,
-            tablename="wrong_method",
-            schema="test",
-            method="insert",
-            wait_till_finished=True,
-        )
 
 
 def test_long_string():
@@ -477,15 +470,14 @@ if __name__ == "__main__":
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
     # test_mapping_column_types()
-    # test_run_multiple(file_dir_run)
     # test_append()
     # test_wrong_method()
     # test_upsert_no_id_field()
     # test_clean_up_db()
-    # test_long_string()
+    test_long_string()
     # test_quote_char()
     # test_pipeline_name()
-    test_empty_dataframe()
+    # test_empty_dataframe()
     # test_convert_bigint()
 
     # RUN AS LAST FUNCTION

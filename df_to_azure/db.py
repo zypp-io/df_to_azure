@@ -1,7 +1,8 @@
-import os
 import logging
-from sqlalchemy import create_engine
+import os
 from urllib.parse import quote_plus
+
+from sqlalchemy import create_engine
 
 
 class SqlUpsert:
@@ -16,9 +17,7 @@ class SqlUpsert:
         return on
 
     def create_update_statement(self):
-        update = ", ".join(
-            [f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols]
-        )
+        update = ", ".join([f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols])
         return update
 
     def create_insert_statement(self):
@@ -63,7 +62,7 @@ class SqlUpsert:
 
 
 def test_uniqueness_columns(df, id_columns):
-    assert df[id_columns].duplicated().sum() == 0, "Key columns are not unique"
+    assert df[id_columns].duplicated().sum() == 0, "When using UPSERT, key columns must be unique."
 
 
 def auth_azure():
@@ -78,3 +77,21 @@ def auth_azure():
     con = create_engine(connection_string).connect()
 
     return con
+
+
+def execute_stmt(stmt: str):
+    """
+    Execute SQL query
+
+    Parameters
+    ----------
+    stmt: str
+        SQL query statement.
+    Returns
+    -------
+
+    """
+    with auth_azure() as con:
+        t = con.begin()
+        con.execute(stmt)
+        t.commit()

@@ -1,15 +1,19 @@
-<div style="text-align:center"><img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png" width="200"></div>
+<div style="text-align:center"><img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png" width="200"></div><br>
+
+[![Downloads](https://pepy.tech/badge/df-to-azure)](https://pepy.tech/project/df-to-azure)
+[![DownloadsMonth](https://pepy.tech/badge/df-to-azure/month)](https://pepy.tech/project/df-to-azure)
+[![Size](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)
 
 # DF to Azure
 
-> Python module for fast upload of pandas DataFrame to azure using automatic created pipelines in Azure Data Factory.
+> Python module for fast upload of pandas DataFrame to Azure SQL Database using automatic created pipelines in Azure Data Factory.
 
 ## Introduction
 
-The purpose of this project is to upload large datasets using Azure Data Factory combined with an Azure SQL Server. 
+The purpose of this project is to upload large datasets using Azure Data Factory combined with an Azure SQL Server.
 In steps the following process kicks off:<p>
     1. The data will be uploaded as a .csv file to Azure Blob storage.<br>
-    2. A SQL table is prepared based on [pandas DataFrame types](https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes), 
+    2. A SQL table is prepared based on [pandas DataFrame types](https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes),
 which will be converted to the corresponding [SQLAlchemy types](https://docs.sqlalchemy.org/en/14/core/type_basics.html). <br>
     3. A pipeline is created in datafactory for uploading the .csv from the Blob storage into the SQL table.<br>
     4. The pipeline is triggered, so that the .csv file is bulk inserted into the SQL table.<br>
@@ -25,10 +29,10 @@ df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_
 ```
 
 1. `df`: dataframe you wish to export
-2. `tablename`: desired name of the table 
+2. `tablename`: desired name of the table
 3. `schema`: desired sql schema
 4. `method`: option for "create" "append" or "upsert"
-5. `id_field`: id field of the table. Necessary if 4 is set to "upsert"
+5. `id_field`: id field of the table. Necessary if `method` is set to "upsert"
 
 **Important**: the csv's are uploaded to a container called `dftoazure`, so create this in your storage account before using this module.
 
@@ -45,8 +49,6 @@ Use the following template when using `.env`
 
 ```text
 # --- ADF SETTINGS ---
-# general run settings
-create="False"
 
 # data factory settings
 rg_name : ""
@@ -61,10 +63,10 @@ ls_blob_account_key : ""
 
 # SQL settings
 ls_sql_name : "Python SQL Linked Service"
-ls_sql_server_name: ""
-ls_sql_database_name: ""
-ls_sql_database_user: ""
-ls_sql_database_password: ""
+SQL_SERVER: ""
+SQL_DB: ""
+SQL_USER: ""
+SQL_PW: ""
 
 # --- AZURE SETTINGS ---
 # azure credentials for connecting to azure subscription.
@@ -74,7 +76,7 @@ tenant : ""
 subscription_id : ""
 ```
 
-## Maintained by Zypp:
+## Maintained by [Zypp](https://github.com/zypp-io):
 - [Melvin Folkers](https://github.com/melvinfolkers)
 - [Erfan Nariman](https://github.com/erfannariman)
 
