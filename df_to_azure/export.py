@@ -21,6 +21,7 @@ def df_to_azure(
     pipeline_name=None,
     text_length=255,
     decimal_precision=2,
+    create=False,
 ):
     adf_client, run_response = DfToAzure(
         df=df,
@@ -32,6 +33,7 @@ def df_to_azure(
         pipeline_name=pipeline_name,
         text_length=text_length,
         decimal_precision=decimal_precision,
+        create=create,
     ).run()
 
     return adf_client, run_response
@@ -49,9 +51,16 @@ class DfToAzure(ADF):
         wait_till_finished: bool = False,
         text_length: int = 255,
         decimal_precision: int = 2,
+        create: bool = False,
     ):
         super().__init__(
-            df=df, tablename=tablename, schema=schema, method=method, id_field=id_field, pipeline_name=pipeline_name
+            df=df,
+            tablename=tablename,
+            schema=schema,
+            method=method,
+            id_field=id_field,
+            pipeline_name=pipeline_name,
+            create=create,
         )
         self.wait_till_finished = wait_till_finished
         self.text_length = text_length
