@@ -40,6 +40,7 @@ class ADF(TableParameters):
         method: str = "create",
         id_field: Union[str, list] = None,
         pipeline_name: str = None,
+        create: bool = False,
     ):
         super().__init__(df, tablename, schema, method, id_field)
         self.credentials = self.create_credentials()
@@ -50,7 +51,7 @@ class ADF(TableParameters):
         self.df_name = os.environ.get("df_name")
         self.ls_sql_name = os.environ.get("ls_sql_name")
         self.ls_blob_name = os.environ.get("ls_blob_name")
-        self.create = True if os.environ.get("create") == "True" else False
+        self.create = create
 
     @staticmethod
     def check_env_variables():
@@ -66,18 +67,14 @@ class ADF(TableParameters):
             "AZURE_CLIENT_SECRET",
             "AZURE_TENANT_ID",
             "SQL_DB",
-            "SQL_PWSQL_SERVER",
+            "SQL_PW",
+            "SQL_SERVER",
             "SQL_USER",
-            "create",
             "df_name",
             "ls_blob_account_key",
             "ls_blob_account_name",
             "ls_blob_name",
-            "ls_sql_database_name",
-            "ls_sql_database_password",
-            "ls_sql_database_user",
             "ls_sql_name",
-            "ls_sql_server_name",
             "rg_location",
             "rg_name",
             "subscription_id",
@@ -139,10 +136,10 @@ class ADF(TableParameters):
     def create_linked_service_sql(self):
         conn_string = SecureString(
             value=f"integrated security=False;encrypt=True;connection timeout=600;data "
-            f"source={os.environ.get('ls_sql_server_name')}"
-            f";initial catalog={os.environ.get('ls_sql_database_name')}"
-            f";user id={os.environ.get('ls_sql_database_user')}"
-            f";password={os.environ.get('ls_sql_database_password')}"
+            f"source={os.environ.get('SQL_SERVER')}"
+            f";initial catalog={os.environ.get('SQL_DB')}"
+            f";user id={os.environ.get('SQL_USER')}"
+            f";password={os.environ.get('SQL_PW')}"
         )
 
         ls_azure_sql = AzureSqlDatabaseLinkedService(connection_string=conn_string)
