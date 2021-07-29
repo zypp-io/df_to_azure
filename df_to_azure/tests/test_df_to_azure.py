@@ -470,7 +470,6 @@ if __name__ == "__main__":
     # test_upsert_category(file_dir_run)
     # test_upsert_id_field_multiple_columns(file_dir_run)
     # test_mapping_column_types()
-    # test_run_multiple(file_dir_run)
     # test_append()
     # test_wrong_method()
     # test_upsert_no_id_field()
