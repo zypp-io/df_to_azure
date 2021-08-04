@@ -95,5 +95,5 @@ pytest df_to_azure
 
 To run pytest for a single test:
 ```commandline
-pytest df_to_azure/tests/test_df_to_azure::test_duplicate_keys_upsert
+pytest df_to_azure/tests/test_df_to_azure.py::test_duplicate_keys_upsert
 ```
