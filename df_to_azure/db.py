@@ -13,17 +13,17 @@ class SqlUpsert:
         self.columns = [col.strip() for col in columns]
 
     def create_on_statement(self):
-        on = " AND ".join([f"s.{id_col} = t.{id_col}" for id_col in self.id_cols])
+        on = " AND ".join([f"s.[{id_col}] = t.[{id_col}]" for id_col in self.id_cols])
         return on
 
     def create_update_statement(self):
-        update = ", ".join([f"t.{col} = s.{col}" for col in self.columns if col not in self.id_cols])
+        update = ", ".join([f"t.[{col}] = s.[{col}]" for col in self.columns if col not in self.id_cols])
         return update
 
     def create_insert_statement(self):
-        insert = f"({', '.join(self.columns)})"
+        insert = f"([{'], ['.join(self.columns)}])"
 
-        values = ", ".join([f"s.{col}" for col in self.columns])
+        values = ", ".join([f"s.[{col}]" for col in self.columns])
         values = f"({values})"
 
         return insert, values
