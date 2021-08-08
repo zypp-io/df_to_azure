@@ -1,12 +1,14 @@
 <p align="center">
   <img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png"  width="200"/>
-</p>
+</p><br>
 
-[![Downloads](https://pepy.tech/badge/df-to-azure)](https://pepy.tech/project/df-to-azure)
-[![DownloadsMonth](https://pepy.tech/badge/df-to-azure/month)](https://pepy.tech/project/df-to-azure)
-[![Size](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)](https://img.shields.io/github/languages/code-size/zypp-io/df_to_azure)
+[![Downloads](https://pepy.tech/badge/df_to_azure)](https://pepy.tech/project/keyvault)
+![PyPI](https://img.shields.io/pypi/v/df_to_azure)
+[![Open Source](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://opensource.org/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-# DF to Azure
+DF to Azure
+===
 
 > Python module for fast upload of pandas DataFrame to Azure SQL Database using automatic created pipelines in Azure Data Factory.
 
