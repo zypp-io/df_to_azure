@@ -49,8 +49,8 @@ class ADF(TableParameters):
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
         self.df_name = os.environ.get("df_name")
-        self.ls_sql_name = os.environ.get("ls_sql_name")
-        self.ls_blob_name = os.environ.get("ls_blob_name")
+        self.ls_sql_name = "Python SQL Linked Service"
+        self.ls_blob_name = "Python Blob Linked Service"
         self.create = create
 
     @staticmethod
