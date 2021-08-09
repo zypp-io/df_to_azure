@@ -60,13 +60,11 @@ rg_location: "westeurope"
 df_name : ""
 
 # blob settings
-ls_blob_name : "Python Blob Linked Service"
 ls_blob_account_name : ""
 ls_blob_container_name : ""
 ls_blob_account_key : ""
 
 # SQL settings
-ls_sql_name : "Python SQL Linked Service"
 SQL_SERVER: ""
 SQL_DB: ""
 SQL_USER: ""
