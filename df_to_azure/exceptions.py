@@ -16,3 +16,9 @@ class PipelineRunError(Exception):
     """Error when ADF pipleine fails"""
 
     pass
+
+
+class WrongDtypeError(Exception):
+    """For the dtypes argument we only accept SQLAlchemy types"""
+
+    pass
