@@ -4,10 +4,12 @@ from typing import Union
 
 from numpy import dtype
 from pandas import BooleanDtype, DataFrame, Int64Dtype, StringDtype
+from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
 from df_to_azure.adf import ADF
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt, test_uniqueness_columns
+from df_to_azure.exceptions import WrongDtypeError
 from df_to_azure.utils import wait_until_pipeline_is_done
 
 
@@ -22,6 +24,7 @@ def df_to_azure(
     text_length=255,
     decimal_precision=2,
     create=False,
+    dtypes=None,
 ):
     adf_client, run_response = DfToAzure(
         df=df,
@@ -34,6 +37,7 @@ def df_to_azure(
         text_length=text_length,
         decimal_precision=decimal_precision,
         create=create,
+        dtypes=dtypes,
     ).run()
 
     return adf_client, run_response
@@ -52,6 +56,7 @@ class DfToAzure(ADF):
         text_length: int = 255,
         decimal_precision: int = 2,
         create: bool = False,
+        dtypes: dict = None,
     ):
         super().__init__(
             df=df,
@@ -65,6 +70,7 @@ class DfToAzure(ADF):
         self.wait_till_finished = wait_till_finished
         self.text_length = text_length
         self.decimal_precision = decimal_precision
+        self.dtypes = dtypes
 
     def run(self):
         if self.create:
@@ -88,6 +94,11 @@ class DfToAzure(ADF):
             wait_until_pipeline_is_done(self.adf_client, run_response)
 
         return self.adf_client, run_response
+
+    def _checks(self):
+        if self.dtypes:
+            if not all([type(given_type) == VisitableType for given_type in self.dtypes.keys()]):
+                WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
 
@@ -119,8 +130,9 @@ class DfToAzure(ADF):
         self.convert_timedelta_to_seconds()
         max_str = self.get_max_str_len()
         bigint = self.check_for_bigint()
+        dtypes_given = {} if self.dtypes is None else self.dtypes
         col_types = self.column_types()
-        for u in [max_str, bigint]:
+        for u in [max_str, bigint, dtypes_given]:
             col_types.update(u)
 
         with auth_azure() as con:
