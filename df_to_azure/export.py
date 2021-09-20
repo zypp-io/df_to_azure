@@ -1,7 +1,11 @@
 import logging
+import os
 import sys
+from datetime import datetime
 from typing import Union
 
+import pandas as pd
+from azure.storage.blob import BlobServiceClient
 from numpy import dtype
 from pandas import BooleanDtype, DataFrame, Int64Dtype, StringDtype
 from sqlalchemy.sql.visitors import VisitableType
@@ -25,22 +29,28 @@ def df_to_azure(
     decimal_precision=2,
     create=False,
     dtypes=None,
+    parquet=False,
 ):
-    adf_client, run_response = DfToAzure(
-        df=df,
-        tablename=tablename,
-        schema=schema,
-        method=method,
-        id_field=id_field,
-        wait_till_finished=wait_till_finished,
-        pipeline_name=pipeline_name,
-        text_length=text_length,
-        decimal_precision=decimal_precision,
-        create=create,
-        dtypes=dtypes,
-    ).run()
 
-    return adf_client, run_response
+    if parquet:
+        DfToParquet(df=df, tablename=tablename, folder=schema, method=method).run()
+        return None
+    else:
+        adf_client, run_response = DfToAzure(
+            df=df,
+            tablename=tablename,
+            schema=schema,
+            method=method,
+            id_field=id_field,
+            wait_till_finished=wait_till_finished,
+            pipeline_name=pipeline_name,
+            text_length=text_length,
+            decimal_precision=decimal_precision,
+            create=create,
+            dtypes=dtypes,
+        ).run()
+
+        return adf_client, run_response
 
 
 class DfToAzure(ADF):
@@ -242,3 +252,80 @@ class DfToAzure(ADF):
         update_dict_bigint = {col: BigInteger() for col in cols_bigint}
 
         return update_dict_bigint
+
+
+class DfToParquet:
+    """
+    This class is intended for uploading a dataframe to the blob container "parquet". The dataframe will be stored in
+    the folder derived from the df_to_azure argument "schema" combined with a subfolder "tablename". If the user adds
+    the argument method=append to df_to_azure, the file will be created with a timestamp suffix.
+    """
+
+    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str):
+        """
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+            dataset to be uploaded as parquet file.
+        tablename: str
+            name of the dataset
+        folder: str
+            foldername. in df_to_azure this is the 'schema' parameter.
+        method: str
+            upload method (create or append supported).
+        """
+
+        self.df = df
+        self.tablename = tablename
+        self.upload_name = self.set_upload_name(folder, method)
+        self.connection_string = self.set_connection_string()
+
+    def set_upload_name(self, folder: str, method: str) -> str:
+        """
+        The method parameter dictates the filename. If append is used, a timestamp will be added in order not to
+        overwrite the parquet file. if method = create (default), the filename will be uploaded as is. To keep files
+        organised, the foldername wil also include the filename. Although this creates redundancy in filename
+
+        Parameters
+        ----------
+        folder: str
+            the folder name, derived from the df_to_azure parameter 'schema'
+        method: str
+            upload_method.
+
+        Returns
+        -------
+        name: str
+            the folder + filename structure for uploading the dataset.
+        """
+        if method == "create":
+            name = f"{folder}/{self.tablename}/{self.tablename}.parquet"
+        elif method == "append":
+            name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
+        else:
+            raise ValueError(f"No valid method given: {method}. choose create or append.")
+        return name
+
+    @staticmethod
+    def set_connection_string() -> str:
+        """
+        sets the connection string based on the blob account name and the blob account key.
+
+        Returns
+        -------
+        connection_str: str
+            the connection string for the Azure storage account.
+        """
+        connect_str = (
+            f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
+            f";AccountKey={os.environ.get('ls_blob_account_key')};"
+        )
+        return connect_str
+
+    def run(self):
+
+        text_stream = self.df.to_parquet()
+        blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
+        container_client = blob_service_client.get_container_client(container="parquet")
+        container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
