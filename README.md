@@ -53,7 +53,7 @@ Use the following template when using `.env`
 
 ## Parquet
 Since version 0.5.4, functionality for uploading dataframe to parquet is supported. simply add argument `parquet=True` to upload the dataframe to the Azure storage container parquet.
-The arguments tablename and schema will be used to create a folder structure. if parquet is set to True, the dataset will not be uploaded to the SQL database.
+The arguments tablename and schema will be used to create a folder structure. if parquet is set to True, the dataset will not be uploaded to a SQL database.
 
 ```text
 # --- ADF SETTINGS ---
