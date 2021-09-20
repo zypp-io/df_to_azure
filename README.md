@@ -51,6 +51,10 @@ To use this module, you need to add the `azure subscriptions settings` and `azur
 We recommend to work with `.env` files (or even better, automatically load them with [Azure Keyvault](https://pypi.org/project/keyvault/)) and load them in during runtime. But this is optional and they can be set as system variables as well.
 Use the following template when using `.env`
 
+## Parquet
+Since version 0.5.4, functionality for uploading dataframe to parquet is supported. simply add argument `parquet=True` to upload the dataframe to the Azure storage container parquet.
+The arguments tablename and schema will be used to create a folder structure. if parquet is set to True, the dataset will not be uploaded to the SQL database.
+
 ```text
 # --- ADF SETTINGS ---
 
