@@ -29,7 +29,7 @@ Based on the following attributes, it is possible to bulk insert your dataframe 
 ```python
 from df_to_azure import df_to_azure
 
-df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_field="col_a")
+df_to_azure(df=df, tablename="table_name", schema="schema", method="create")
 ```
 
 1. `df`: dataframe you wish to export
