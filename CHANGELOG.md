@@ -1,7 +1,7 @@
 Changelog
 ===
 
-# 0.5.5
+# 0.6.0
 - Added support for uploading parquet files (create and append)
 - Added dependency pyarrow for handling parquet export
 
