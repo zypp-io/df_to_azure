@@ -29,7 +29,7 @@ Based on the following attributes, it is possible to bulk insert your dataframe 
 ```python
 from df_to_azure import df_to_azure
 
-df_to_azure(df=df, tablename="table_name", schema="schema", method="create", id_field="col_a")
+df_to_azure(df=df, tablename="table_name", schema="schema", method="create")
 ```
 
 1. `df`: dataframe you wish to export
@@ -50,6 +50,10 @@ The new records will be uploaded and appended to the current SQL table.
 To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your environment variables.
 We recommend to work with `.env` files (or even better, automatically load them with [Azure Keyvault](https://pypi.org/project/keyvault/)) and load them in during runtime. But this is optional and they can be set as system variables as well.
 Use the following template when using `.env`
+
+## Parquet
+Since version 0.6.0, functionality for uploading dataframe to parquet is supported. simply add argument `parquet=True` to upload the dataframe to the Azure storage container parquet.
+The arguments tablename and schema will be used to create a folder structure. if parquet is set to True, the dataset will not be uploaded to a SQL database.
 
 ```text
 # --- ADF SETTINGS ---
