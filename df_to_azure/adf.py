@@ -1,5 +1,6 @@
 import logging
 import os
+from re import sub
 from typing import Union
 
 from azure.identity import ClientSecretCredential
@@ -50,9 +51,9 @@ class ADF(TableParameters):
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
         self.df_name = os.environ.get("df_name")
-        self.ls_sql_name = (
-            f'server={os.environ.get("SQL_SERVER").replace(".", "-")} '
-            f'database={os.environ.get("SQL_DB").replace("_","-")}'
+        self.ls_sql_name = "server={} database={}".format(
+            sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_SERVER")),
+            sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_DB")),
         )
         self.ls_blob_name = f'accountname={os.environ.get("ls_blob_account_name")}'
         self.create = create
