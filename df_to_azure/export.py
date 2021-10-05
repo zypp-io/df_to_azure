@@ -300,7 +300,7 @@ class DfToParquet:
             the folder + filename structure for uploading the dataset.
         """
         if method == "create":
-            name = f"{folder}/{self.tablename}/{self.tablename}.parquet"
+            name = f"{folder}/{self.tablename}.parquet"
         elif method == "append":
             name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
         else:
