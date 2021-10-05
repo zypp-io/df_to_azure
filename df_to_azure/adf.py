@@ -1,5 +1,6 @@
 import logging
 import os
+from re import sub
 from typing import Union
 
 from azure.identity import ClientSecretCredential
@@ -17,6 +18,7 @@ from azure.mgmt.datafactory.models import (
     DependencyCondition,
     Factory,
     LinkedServiceReference,
+    LinkedServiceResource,
     PipelineResource,
     SecureString,
     SqlServerStoredProcedureActivity,
@@ -49,8 +51,11 @@ class ADF(TableParameters):
         self.ls_blob_account_name = os.environ.get("ls_blob_account_name")
         self.rg_name = os.environ.get("rg_name")
         self.df_name = os.environ.get("df_name")
-        self.ls_sql_name = "Python SQL Linked Service"
-        self.ls_blob_name = "Python Blob Linked Service"
+        self.ls_sql_name = "server={} database={}".format(
+            sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_SERVER")),
+            sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_DB")),
+        )
+        self.ls_blob_name = f'accountname={os.environ.get("ls_blob_account_name")}'
         self.create = create
 
     @staticmethod
@@ -142,7 +147,7 @@ class ADF(TableParameters):
             f";password={os.environ.get('SQL_PW')}"
         )
 
-        ls_azure_sql = AzureSqlDatabaseLinkedService(connection_string=conn_string)
+        ls_azure_sql = LinkedServiceResource(properties=AzureSqlDatabaseLinkedService(connection_string=conn_string))
 
         self.adf_client.linked_services.create_or_update(
             self.rg_name,
@@ -157,7 +162,7 @@ class ADF(TableParameters):
             f";AccountKey={os.environ.get('ls_blob_account_key')}"
         )
 
-        ls_azure_blob = AzureStorageLinkedService(connection_string=storage_string)
+        ls_azure_blob = LinkedServiceResource(properties=AzureStorageLinkedService(connection_string=storage_string))
         self.adf_client.linked_services.create_or_update(
             self.rg_name,
             self.df_name,

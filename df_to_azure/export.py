@@ -90,9 +90,9 @@ class DfToAzure(ADF):
             self.create_datafactory()
             self.create_blob_container()
 
-            # linked services
-            self.create_linked_service_sql()
-            self.create_linked_service_blob()
+        # linked services
+        self.create_linked_service_sql()
+        self.create_linked_service_blob()
 
         self.upload_dataset()
         self.create_input_blob()
@@ -279,7 +279,7 @@ class DfToParquet:
         self.df = df
         self.tablename = tablename
         self.upload_name = self.set_upload_name(folder, method)
-        self.connection_string = self.set_connection_string()
+        self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
 
     def set_upload_name(self, folder: str, method: str) -> str:
         """
@@ -300,28 +300,12 @@ class DfToParquet:
             the folder + filename structure for uploading the dataset.
         """
         if method == "create":
-            name = f"{folder}/{self.tablename}/{self.tablename}.parquet"
+            name = f"{folder}/{self.tablename}.parquet"
         elif method == "append":
             name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
         else:
             raise ValueError(f"No valid method given: {method}. choose create or append.")
         return name
-
-    @staticmethod
-    def set_connection_string() -> str:
-        """
-        sets the connection string based on the blob account name and the blob account key.
-
-        Returns
-        -------
-        connection_str: str
-            the connection string for the Azure storage account.
-        """
-        connect_str = (
-            f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
-            f";AccountKey={os.environ.get('ls_blob_account_key')};"
-        )
-        return connect_str
 
     def run(self):
 
