@@ -5,8 +5,8 @@
 [![Downloads](https://pepy.tech/badge/df_to_azure)](https://pepy.tech/project/keyvault)
 [![Open Source](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://opensource.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![PyPI](https://img.shields.io/pypi/v/df_to_azure)
-[![Latest release](https://badgen.net/github/release/zypp-io/df_to_azure)](https://github.com/Naereen/Strapdown.js/releases)
+[![PyPI](https://img.shields.io/pypi/v/df_to_azure)](https://pypi.org/project/df-to-azure/)
+[![Latest release](https://badgen.net/github/release/zypp-io/df_to_azure)](https://github.com/zypp-io/df_to_azure/releases)
 
 DF to Azure
 ===
