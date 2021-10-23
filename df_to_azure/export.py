@@ -344,7 +344,7 @@ class DfToParquet:
 
         if self.method == "upsert":
             downloaded_blob = container_client.download_blob(self.upload_name)
-            bytes_io = BytesIO(downloaded_blob.content_as_bytes())
+            bytes_io = BytesIO(downloaded_blob.readall())
             df_existing = pd.read_parquet(bytes_io)
             self.upsert(df_existing=df_existing)
 
