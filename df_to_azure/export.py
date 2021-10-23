@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from io import BytesIO
 from typing import Union
 
 import pandas as pd
@@ -261,7 +262,7 @@ class DfToParquet:
     the argument method=append to df_to_azure, the file will be created with a timestamp suffix.
     """
 
-    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str):
+    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str, id_cols: list = None):
         """
 
         Parameters
@@ -274,14 +275,18 @@ class DfToParquet:
             foldername. in df_to_azure this is the 'schema' parameter.
         method: str
             upload method (create or append supported).
+        id_cols: list
+            Keys to perform upsert on.
         """
 
         self.df = df
         self.tablename = tablename
-        self.upload_name = self.set_upload_name(folder, method)
+        self.method = method
+        self.id_cols = id_cols
+        self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
 
-    def set_upload_name(self, folder: str, method: str) -> str:
+    def set_upload_name(self, folder: str) -> str:
         """
         The method parameter dictates the filename. If append is used, a timestamp will be added in order not to
         overwrite the parquet file. if method = create (default), the filename will be uploaded as is. To keep files
@@ -291,25 +296,57 @@ class DfToParquet:
         ----------
         folder: str
             the folder name, derived from the df_to_azure parameter 'schema'
-        method: str
-            upload_method.
 
         Returns
         -------
         name: str
             the folder + filename structure for uploading the dataset.
         """
-        if method == "create":
+        if self.method in ("create", "upsert"):
             name = f"{folder}/{self.tablename}.parquet"
-        elif method == "append":
+        elif self.method == "append":
             name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
         else:
-            raise ValueError(f"No valid method given: {method}. choose create or append.")
+            raise ValueError(f"No valid method given: {self.method}. choose create or append.")
         return name
 
-    def run(self):
+    def upsert(self, df_existing: pd.DataFrame):
+        """
+        Perform insert or update on a pandas DataFrame.
 
-        text_stream = self.df.to_parquet()
+        The new values of df2 will be updated in df1, and new rows in df2 will be appended to df1.
+
+        1. We read the existing parquet file from storage
+        2. We do the upsert with the given dataframe
+        3. We upload and overwrite the parquet file on storage with the updated dataframe
+
+        Parameters
+        ----------
+        df_existing: pd.DataFrame
+            The dataframe which is already on Azure Storage and has to be updated.
+
+        Returns
+        -------
+        result: pd.DataFrame
+            Updated dataframe to be uploaded.
+        """
+        # set indices with id columns
+        df_existing = df_existing.set_index(self.id_cols)
+        self.df = self.df.set_index(self.id_cols)
+        # perform upsert
+        self.df = df_existing.combine_first(self.df)
+        # set id columns back as regular colums
+        self.df = self.df.reset_index()
+
+    def run(self):
         blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
         container_client = blob_service_client.get_container_client(container="parquet")
+
+        if self.method == "upsert":
+            downloaded_blob = container_client.download_blob(self.upload_name)
+            bytes_io = BytesIO(downloaded_blob.content_as_bytes())
+            df_existing = pd.read_parquet(bytes_io)
+            self.upsert(df_existing=df_existing)
+
+        text_stream = self.df.to_parquet()
         container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
