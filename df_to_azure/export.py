@@ -314,7 +314,8 @@ class DfToParquet:
         """
         Perform insert or update on a pandas DataFrame.
 
-        The new values of df2 will be updated in df1, and new rows in df2 will be appended to df1.
+        The new values of self.df will be updated in df_existing,
+        and new rows in self.df will be appended to df_existing.
 
         1. We read the existing parquet file from storage
         2. We do the upsert with the given dataframe
