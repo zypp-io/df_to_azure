@@ -285,6 +285,11 @@ class DfToParquet:
         self.id_cols = id_cols
         self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        self._checks()
+
+    def _checks(self):
+        if self.method == "upsert" and (self.id_cols is None or len(self.id_cols) == 0):
+            raise ValueError("With method is upsert, you need to give one or more id columns in argument id_cols")
 
     def set_upload_name(self, folder: str) -> str:
         """
