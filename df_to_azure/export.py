@@ -337,6 +337,15 @@ class DfToParquet:
         result: pd.DataFrame
             Updated dataframe to be uploaded.
         """
+        # check if columns are equal
+
+        diff_cols = self.df.columns.symmetric_difference(df_existing.columns)
+        if diff_cols.any():
+            err_msg = (
+                f"When performing upsert, column names must be equal. " f"Difference in columns: {', '.join(diff_cols)}"
+            )
+            raise ValueError(err_msg)
+
         # set indices with id columns
         df_existing = df_existing.set_index(self.id_field)
         self.df = self.df.set_index(self.id_field)

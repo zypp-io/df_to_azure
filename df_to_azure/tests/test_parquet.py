@@ -75,10 +75,31 @@ def test_upsert_new_rows():
     assert_frame_equal(df2, result)
 
 
-def test_uniqueness_id_cols():
+def test_upsert_uniqueness_id_cols():
     df = DataFrame({"id": range(1000, 1050, 10), "value1": range(10, 60, 10), "value2": list("abcde")})
     df.loc[1, "id"] = df.loc[0, "id"]
 
     # this should raise since columns are not unique
     with pytest.raises(AssertionError):
         df_to_azure(df=df, tablename="test_upsert", schema="test_parquet", method="upsert", id_field=["id"])
+
+
+def test_upsert_difference_columns():
+    df1 = DataFrame({"id": [1, 2, 3], "value1": ["A", "B", "C"], "value2": ["D", "E", "F"]})
+
+    # upload original dataframe
+    df_to_azure(df=df1, tablename="upsert_new_cols", schema="test_parquet", parquet=True)
+
+    # add new column
+    df1["new_col"] = 10
+
+    # this should raise since columns are not equal
+    with pytest.raises(ValueError):
+        # perform upsert
+        df_to_azure(
+            df=df1, tablename="upsert_new_cols", schema="test_parquet", method="upsert", parquet=True, id_field=["id"]
+        )
+
+
+if __name__ == "__main__":
+    test_upsert_difference_columns()
