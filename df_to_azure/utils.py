@@ -82,3 +82,7 @@ def wait_until_pipeline_is_done(adf_client, run_response):
 
         if time.time() > timeout:
             raise PipelineRunError("Pipeline is running too long")
+
+
+def test_uniqueness_columns(df, id_columns):
+    assert df[id_columns].duplicated().sum() == 0, "When using UPSERT, key columns must be unique."

@@ -13,9 +13,9 @@ from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
 from df_to_azure.adf import ADF
-from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt, test_uniqueness_columns
+from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
 from df_to_azure.exceptions import WrongDtypeError
-from df_to_azure.utils import wait_until_pipeline_is_done
+from df_to_azure.utils import test_uniqueness_columns, wait_until_pipeline_is_done
 
 
 def df_to_azure(
@@ -349,6 +349,7 @@ class DfToParquet:
         container_client = blob_service_client.get_container_client(container="parquet")
 
         if self.method == "upsert":
+            test_uniqueness_columns(self.df, self.id_cols)
             downloaded_blob = container_client.download_blob(self.upload_name)
             bytes_io = BytesIO(downloaded_blob.readall())
             df_existing = pd.read_parquet(bytes_io)
