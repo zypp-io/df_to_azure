@@ -312,7 +312,8 @@ class DfToParquet:
         elif self.method == "append":
             name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
         else:
-            raise ValueError(f"No valid method given: {self.method}. choose create or append.")
+            allow_list = ["create", "append", "upsert"]
+            raise ValueError(f"No valid method given: {self.method}. choose from {', '.join(allow_list)}.")
         return name
 
     def upsert(self, df_existing: pd.DataFrame):
