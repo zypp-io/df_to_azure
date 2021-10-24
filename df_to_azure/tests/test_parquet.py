@@ -54,7 +54,3 @@ def test_uniqueness_id_cols():
     # this should raise since columns are not unique
     with pytest.raises(AssertionError):
         df_to_azure(df=df, tablename="test_upsert", schema="test_parquet", method="upsert", id_field=["id"])
-
-
-if __name__ == "__main__":
-    test_upsert_parquet_same_shape()
