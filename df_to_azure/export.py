@@ -34,7 +34,7 @@ def df_to_azure(
 ):
 
     if parquet:
-        DfToParquet(df=df, tablename=tablename, folder=schema, method=method).run()
+        DfToParquet(df=df, tablename=tablename, folder=schema, method=method, id_field=id_field).run()
         return None
     else:
         adf_client, run_response = DfToAzure(
@@ -262,7 +262,7 @@ class DfToParquet:
     the argument method=append to df_to_azure, the file will be created with a timestamp suffix.
     """
 
-    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str, id_cols: list = None):
+    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str, id_field: list = None):
         """
 
         Parameters
@@ -275,20 +275,20 @@ class DfToParquet:
             foldername. in df_to_azure this is the 'schema' parameter.
         method: str
             upload method (create or append supported).
-        id_cols: list
+        id_field: list
             Keys to perform upsert on.
         """
 
         self.df = df
         self.tablename = tablename
         self.method = method
-        self.id_cols = id_cols
+        self.id_field = id_field
         self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
 
     def _checks(self):
-        if self.method == "upsert" and (self.id_cols is None or len(self.id_cols) == 0):
+        if self.method == "upsert" and not self.id_field:
             raise ValueError("With method is upsert, you need to give one or more id columns in argument id_cols")
 
     def set_upload_name(self, folder: str) -> str:
@@ -338,10 +338,10 @@ class DfToParquet:
             Updated dataframe to be uploaded.
         """
         # set indices with id columns
-        df_existing = df_existing.set_index(self.id_cols)
-        self.df = self.df.set_index(self.id_cols)
+        df_existing = df_existing.set_index(self.id_field)
+        self.df = self.df.set_index(self.id_field)
         # perform upsert
-        self.df = df_existing.combine_first(self.df)
+        self.df = self.df.combine_first(df_existing)
         # set id columns back as regular colums
         self.df = self.df.reset_index()
 
@@ -350,7 +350,7 @@ class DfToParquet:
         container_client = blob_service_client.get_container_client(container="parquet")
 
         if self.method == "upsert":
-            test_uniqueness_columns(self.df, self.id_cols)
+            test_uniqueness_columns(self.df, self.id_field)
             downloaded_blob = container_client.download_blob(self.upload_name)
             bytes_io = BytesIO(downloaded_blob.readall())
             df_existing = pd.read_parquet(bytes_io)
