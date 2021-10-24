@@ -99,7 +99,3 @@ def test_upsert_difference_columns():
         df_to_azure(
             df=df1, tablename="upsert_new_cols", schema="test_parquet", method="upsert", parquet=True, id_field=["id"]
         )
-
-
-if __name__ == "__main__":
-    test_upsert_difference_columns()
