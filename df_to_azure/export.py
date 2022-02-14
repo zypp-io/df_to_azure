@@ -346,13 +346,19 @@ class DfToParquet:
             )
             raise ValueError(err_msg)
 
-        # set indices with id columns
-        df_existing = df_existing.set_index(self.id_field)
-        self.df = self.df.set_index(self.id_field)
-        # perform upsert
-        self.df = self.df.combine_first(df_existing)
-        # set id columns back as regular colums
-        self.df = self.df.reset_index()
+        # check if there are any NaNs in the new data, else we use pd.concat instead of combine_first
+        idx = self.df.set_index(self.id_field)
+        any_nan = idx.isna().any(axis=1)
+        if any_nan.any():
+            self.df = pd.concat([self.df, df_existing]).drop_duplicates(subset=self.id_field)
+            self.df = self.df.sort_values(self.id_field, ignore_index=True)
+        else:
+            # set indices with id columns
+            df_existing = df_existing.set_index(self.id_field)
+            # perform upsert
+            self.df = idx.combine_first(df_existing)
+            # set id columns back as regular colums
+            self.df = self.df.reset_index()
 
     def run(self):
         blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
