@@ -43,7 +43,7 @@ class SqlUpsert:
             THEN INSERT {insert[0]}
                  VALUES {insert[1]};
         """
-        logging.info(query)
+        logging.debug(query)
 
         return query
 
