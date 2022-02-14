@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from io import BytesIO
 from typing import Union
 
 import pandas as pd
@@ -12,9 +13,9 @@ from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
 from df_to_azure.adf import ADF
-from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt, test_uniqueness_columns
+from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
 from df_to_azure.exceptions import WrongDtypeError
-from df_to_azure.utils import wait_until_pipeline_is_done
+from df_to_azure.utils import test_uniqueness_columns, wait_until_pipeline_is_done
 
 
 def df_to_azure(
@@ -33,7 +34,7 @@ def df_to_azure(
 ):
 
     if parquet:
-        DfToParquet(df=df, tablename=tablename, folder=schema, method=method).run()
+        DfToParquet(df=df, tablename=tablename, folder=schema, method=method, id_field=id_field).run()
         return None
     else:
         adf_client, run_response = DfToAzure(
@@ -261,7 +262,7 @@ class DfToParquet:
     the argument method=append to df_to_azure, the file will be created with a timestamp suffix.
     """
 
-    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str):
+    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str, id_field: list = None):
         """
 
         Parameters
@@ -274,14 +275,23 @@ class DfToParquet:
             foldername. in df_to_azure this is the 'schema' parameter.
         method: str
             upload method (create or append supported).
+        id_field: list
+            Keys to perform upsert on.
         """
 
         self.df = df
         self.tablename = tablename
-        self.upload_name = self.set_upload_name(folder, method)
+        self.method = method
+        self.id_field = id_field
+        self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        self._checks()
 
-    def set_upload_name(self, folder: str, method: str) -> str:
+    def _checks(self):
+        if self.method == "upsert" and not self.id_field:
+            raise ValueError("With method is upsert, you need to give one or more id columns in argument id_cols")
+
+    def set_upload_name(self, folder: str) -> str:
         """
         The method parameter dictates the filename. If append is used, a timestamp will be added in order not to
         overwrite the parquet file. if method = create (default), the filename will be uploaded as is. To keep files
@@ -291,25 +301,75 @@ class DfToParquet:
         ----------
         folder: str
             the folder name, derived from the df_to_azure parameter 'schema'
-        method: str
-            upload_method.
 
         Returns
         -------
         name: str
             the folder + filename structure for uploading the dataset.
         """
-        if method == "create":
+        if self.method in ("create", "upsert"):
             name = f"{folder}/{self.tablename}.parquet"
-        elif method == "append":
+        elif self.method == "append":
             name = f"{folder}/{self.tablename}/{self.tablename}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
         else:
-            raise ValueError(f"No valid method given: {method}. choose create or append.")
+            allow_list = ["create", "append", "upsert"]
+            raise ValueError(f"No valid method given: {self.method}. choose from {', '.join(allow_list)}.")
         return name
 
-    def run(self):
+    def upsert(self, df_existing: pd.DataFrame):
+        """
+        Perform insert or update on a pandas DataFrame.
 
-        text_stream = self.df.to_parquet()
+        The new values of self.df will be updated in df_existing,
+        and new rows in self.df will be appended to df_existing.
+
+        1. We read the existing parquet file from storage
+        2. We do the upsert with the given dataframe
+        3. We upload and overwrite the parquet file on storage with the updated dataframe
+
+        Parameters
+        ----------
+        df_existing: pd.DataFrame
+            The dataframe which is already on Azure Storage and has to be updated.
+
+        Returns
+        -------
+        result: pd.DataFrame
+            Updated dataframe to be uploaded.
+        """
+        # check if columns are equal
+
+        diff_cols = self.df.columns.symmetric_difference(df_existing.columns)
+        if diff_cols.any():
+            err_msg = (
+                f"When performing upsert, column names must be equal. " f"Difference in columns: {', '.join(diff_cols)}"
+            )
+            raise ValueError(err_msg)
+
+        # check if there are any NaNs in the new data, else we use pd.concat instead of combine_first
+        idx = self.df.set_index(self.id_field)
+        any_nan = idx.isna().any(axis=1)
+        if any_nan.any():
+            self.df = pd.concat([self.df, df_existing]).drop_duplicates(subset=self.id_field)
+            self.df = self.df.sort_values(self.id_field, ignore_index=True)
+        else:
+            # set indices with id columns
+            df_existing = df_existing.set_index(self.id_field)
+            # perform upsert
+            self.df = idx.combine_first(df_existing)
+            # set id columns back as regular colums
+            self.df = self.df.reset_index()
+
+    def run(self):
         blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
         container_client = blob_service_client.get_container_client(container="parquet")
+
+        if self.method == "upsert":
+            test_uniqueness_columns(self.df, self.id_field)
+            downloaded_blob = container_client.download_blob(self.upload_name)
+            bytes_io = BytesIO(downloaded_blob.readall())
+            df_existing = pd.read_parquet(bytes_io)
+            self.upsert(df_existing=df_existing)
+
+        text_stream = self.df.to_parquet()
         container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
