@@ -43,4 +43,4 @@ jobs:
         python-version: 3.8
     - name: execute py script
       run: |
-        python ./scripts/check_setupcfg_and_requirementst_equal.py
+        python ./scripts/check_setupcfg_and_requirements_equal.py
