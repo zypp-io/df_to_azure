@@ -42,6 +42,5 @@ jobs:
       with:
         python-version: 3.8
     - name: execute py script
-      uses: actions/checkout@v2
       run: |
         python ./scripts/check_setupcfg_and_requirementst_equal.py
