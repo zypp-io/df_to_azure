@@ -35,3 +35,12 @@ jobs:
     - name: Python Black Check
       run: |
         black --line-length=120 --check df_to_azure
+    - name: assert equality between setup.cfg and requirements.txt
+      uses: actions/checkout@v2
+    - name: setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: execute py script
+      run: |
+        python ./scripts/check_setupcfg_and_requirementst_equal.py
