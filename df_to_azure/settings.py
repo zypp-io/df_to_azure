@@ -1,6 +1,7 @@
 from typing import Union
 
 from pandas import DataFrame
+from df_to_azure.utils import test_unique_column_names
 
 
 class TableParameters:
@@ -20,6 +21,7 @@ class TableParameters:
         # checks
         self.check_method()
         self.check_upsert()
+        test_unique_column_names(df)
 
     def check_method(self):
         valid_methods = ["create", "append", "upsert"]

@@ -84,5 +84,9 @@ def wait_until_pipeline_is_done(adf_client, run_response):
             raise PipelineRunError("Pipeline is running too long")
 
 
-def test_uniqueness_columns(df, id_columns):
-    assert df[id_columns].duplicated().sum() == 0, "When using UPSERT, key columns must be unique."
+def test_unique_column_names(df, cols: list = None):
+    """Column names should be unique"""
+    if cols:
+        df = df[cols]
+    if df.columns.duplicated().sum() != 0:
+        raise ValueError("Column names are not unique.")
