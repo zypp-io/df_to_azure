@@ -15,7 +15,7 @@ from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, St
 from df_to_azure.adf import ADF
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
 from df_to_azure.exceptions import WrongDtypeError
-from df_to_azure.utils import test_uniqueness_columns, wait_until_pipeline_is_done
+from df_to_azure.utils import test_unique_column_names, test_uniqueness_columns, wait_until_pipeline_is_done
 
 
 def df_to_azure(
@@ -121,7 +121,7 @@ class DfToAzure(ADF):
             self.create_schema()
             self.push_to_azure()
         if self.method == "upsert":
-            # key columns have to be unique for upsert.
+            # Key columns need only unique values for upsert
             test_uniqueness_columns(self.df, self.id_field)
             upsert = SqlUpsert(
                 table_name=self.table_name,
@@ -286,6 +286,7 @@ class DfToParquet:
         self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
+        test_unique_column_names(self.df)
 
     def _checks(self):
         if self.method == "upsert" and not self.id_field:
