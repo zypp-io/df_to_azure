@@ -8,6 +8,7 @@ from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
+from df_to_azure.exceptions import DoubleColumnNamesError
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
@@ -181,3 +182,15 @@ def test_convert_bigint():
 
     expected = DataFrame({"COLUMN_NAME": ["A", "B"], "DATA_TYPE": ["bigint", "int"]})
     assert_frame_equal(result, expected)
+
+
+def test_double_column_names():
+    df_double_names = DataFrame({"A": [1, 2, 3], "B": [10, 20, 30], "C": ["X", "Y", "Z"]})
+    df_double_names = df_double_names.rename(columns={"C": "A"})
+    with pytest.raises(DoubleColumnNamesError):
+        df_to_azure(
+            df=df_double_names,
+            tablename="double_column_names",
+            schema="test",
+            wait_till_finished=True,
+        )
