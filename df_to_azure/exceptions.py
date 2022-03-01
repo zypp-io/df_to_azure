@@ -26,4 +26,5 @@ class WrongDtypeError(Exception):
 
 class DoubleColumnNamesError(Exception):
     """For writing to Azure we do not accept double column names"""
+
     pass
