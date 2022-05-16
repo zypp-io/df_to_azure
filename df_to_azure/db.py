@@ -2,8 +2,8 @@ import logging
 import os
 from urllib.parse import quote_plus
 
-import sqlalchemy.exc
 from sqlalchemy import create_engine
+from sqlalchemy.exc import ProgrammingError
 
 from df_to_azure.exceptions import UpsertError
 
@@ -63,7 +63,7 @@ class SqlUpsert:
             try:
                 con.execute(query_create_merge)
                 t.commit()
-            except sqlalchemy.exc.ProgrammingError:
+            except ProgrammingError:
                 raise UpsertError(
                     "During upsert there has been an issue. One of the sources could be that the table in"
                     " staging has columns that do not match the table you want to upsert. Remove the "
