@@ -28,3 +28,9 @@ class DoubleColumnNamesError(Exception):
     """For writing to Azure we do not accept double column names"""
 
     pass
+
+
+class UpsertError(Exception):
+    """For the moment upsert want to use a staging table that has the same name, but other columns"""
+
+    pass

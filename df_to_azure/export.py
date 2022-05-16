@@ -31,6 +31,7 @@ def df_to_azure(
     create=False,
     dtypes=None,
     parquet=False,
+    clean_staging=True,
 ):
 
     if parquet:
@@ -49,6 +50,7 @@ def df_to_azure(
             decimal_precision=decimal_precision,
             create=create,
             dtypes=dtypes,
+            clean_staging=clean_staging,
         ).run()
 
         return adf_client, run_response
@@ -68,6 +70,7 @@ class DfToAzure(ADF):
         decimal_precision: int = 2,
         create: bool = False,
         dtypes: dict = None,
+        clean_staging: bool = True,
     ):
         super().__init__(
             df=df,
@@ -82,6 +85,7 @@ class DfToAzure(ADF):
         self.text_length = text_length
         self.decimal_precision = decimal_precision
         self.dtypes = dtypes
+        self.clean_staging = clean_staging
 
     def run(self):
         if self.create:
@@ -103,6 +107,10 @@ class DfToAzure(ADF):
         run_response = self.create_pipeline(pipeline_name=self.pipeline_name)
         if self.wait_till_finished:
             wait_until_pipeline_is_done(self.adf_client, run_response)
+        if self.clean_staging & (self.method == "upsert"):
+            # If you used clean_staging=False before and the upsert gives errors on unknown columns -> remove table in
+            # staging manually
+            self.clean_staging_after_upsert()
 
         return self.adf_client, run_response
 
@@ -253,6 +261,16 @@ class DfToAzure(ADF):
         update_dict_bigint = {col: BigInteger() for col in cols_bigint}
 
         return update_dict_bigint
+
+    def clean_staging_after_upsert(self):
+        """
+        Function to drop the table created in staging for the upsert. This function prevents issues with unmatchable
+        columns when doing upsert of different data with the same name.
+        """
+        query = f"""
+        DROP TABLE IF EXISTS staging.{self.table_name}
+        """
+        execute_stmt(query)
 
 
 class DfToParquet:
