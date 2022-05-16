@@ -31,6 +31,6 @@ class DoubleColumnNamesError(Exception):
 
 
 class UpsertError(Exception):
-    """For the moment upsert want to use a staging table that has the same name, but other columns"""
+    """For the moment upsert gives an error"""
 
     pass
