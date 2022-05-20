@@ -8,7 +8,7 @@ from typing import Union
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from numpy import dtype
-from pandas import BooleanDtype, DataFrame, Int64Dtype, StringDtype
+from pandas import BooleanDtype, DataFrame, Int8Dtype, Int16Dtype, Int32Dtype, Int64Dtype, StringDtype
 from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
@@ -217,6 +217,9 @@ class DfToAzure(ADF):
             dtype("int32"): Integer(),
             dtype("int16"): Integer(),
             dtype("int8"): Integer(),
+            Int8Dtype: Integer(),
+            Int16Dtype: Integer(),
+            Int32Dtype: Integer(),
             Int64Dtype(): Integer(),
             dtype("float64"): numeric,
             dtype("float32"): numeric,
