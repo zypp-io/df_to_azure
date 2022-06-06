@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from df_to_azure.exceptions import PipelineRunError
+from df_to_azure.exceptions import PipelineRunError, DoubleColumnNamesError
 
 
 def print_item(group):
@@ -82,3 +82,16 @@ def wait_until_pipeline_is_done(adf_client, run_response):
 
         if time.time() > timeout:
             raise PipelineRunError("Pipeline is running too long")
+
+
+def test_uniqueness_columns(df, id_columns):
+    """Test whether values in the id columns are unique"""
+    assert df[id_columns].duplicated().sum() == 0, "When using UPSERT, key columns must be unique."
+
+
+def test_unique_column_names(df, cols: list = None):
+    """Column names should be unique"""
+    if cols:
+        df = df[cols]
+    if df.columns.duplicated().sum() != 0:
+        raise DoubleColumnNamesError("Column names are not unique.")

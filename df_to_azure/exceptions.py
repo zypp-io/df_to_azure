@@ -22,3 +22,15 @@ class WrongDtypeError(Exception):
     """For the dtypes argument we only accept SQLAlchemy types"""
 
     pass
+
+
+class DoubleColumnNamesError(Exception):
+    """For writing to Azure we do not accept double column names"""
+
+    pass
+
+
+class UpsertError(Exception):
+    """For the moment upsert gives an error"""
+
+    pass

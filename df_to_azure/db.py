@@ -3,6 +3,9 @@ import os
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import ProgrammingError
+
+from df_to_azure.exceptions import UpsertError
 
 
 class SqlUpsert:
@@ -43,7 +46,7 @@ class SqlUpsert:
             THEN INSERT {insert[0]}
                  VALUES {insert[1]};
         """
-        logging.info(query)
+        logging.debug(query)
 
         return query
 
@@ -57,12 +60,15 @@ class SqlUpsert:
             query_drop_procedure = self.drop_procedure()
             con.execute(query_drop_procedure)
             query_create_merge = self.create_merge_query()
-            con.execute(query_create_merge)
-            t.commit()
-
-
-def test_uniqueness_columns(df, id_columns):
-    assert df[id_columns].duplicated().sum() == 0, "When using UPSERT, key columns must be unique."
+            try:
+                con.execute(query_create_merge)
+                t.commit()
+            except ProgrammingError:
+                raise UpsertError(
+                    "During upsert there has been an issue. One of the sources could be that the table in"
+                    " staging has columns that do not match the table you want to upsert. Remove the "
+                    f"staging table {self.table_name} manually in that case"
+                )
 
 
 def auth_azure():
