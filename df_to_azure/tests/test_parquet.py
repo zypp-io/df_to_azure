@@ -20,6 +20,22 @@ def test_create_parquet():
     df_to_azure(df=df, tablename="my_test_tablename_create", schema="my_test_schema", parquet=True)
 
 
+def test_create_not_existing_container():
+    df = data["sample_1"]
+    container_name = "non-existing-xyz"
+    df_to_azure(
+        df=df,
+        tablename="my_test_tablename_create",
+        schema="my_test_schema",
+        parquet=True,
+        container_parquet=container_name,
+    )
+    client_for_deletion = BLOB_SERVICE_CLIENT.get_container_client(container=container_name)
+    assert client_for_deletion.get_container_properties()["name"] == container_name
+    # After creation delete the container
+    client_for_deletion.delete_container()
+
+
 def test_append_parquet():
     df = data["sample_1"]
 
