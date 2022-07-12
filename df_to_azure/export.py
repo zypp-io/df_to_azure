@@ -5,6 +5,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Union
 
+import azure.core.exceptions
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from numpy import dtype
@@ -32,10 +33,18 @@ def df_to_azure(
     dtypes=None,
     parquet=False,
     clean_staging=True,
+    container_name="parquet",
 ):
 
     if parquet:
-        DfToParquet(df=df, tablename=tablename, folder=schema, method=method, id_field=id_field).run()
+        DfToParquet(
+            df=df,
+            tablename=tablename,
+            folder=schema,
+            method=method,
+            id_field=id_field,
+            container_name=container_name,
+        ).run()
         return None
     else:
         adf_client, run_response = DfToAzure(
@@ -283,7 +292,9 @@ class DfToParquet:
     the argument method=append to df_to_azure, the file will be created with a timestamp suffix.
     """
 
-    def __init__(self, df: pd.DataFrame, tablename: str, folder: str, method: str, id_field: list = None):
+    def __init__(
+        self, df: pd.DataFrame, tablename: str, folder: str, method: str, container_name: str, id_field: list = None
+    ):
         """
 
         Parameters
@@ -296,6 +307,8 @@ class DfToParquet:
             foldername. in df_to_azure this is the 'schema' parameter.
         method: str
             upload method (create or append supported).
+        container_name: str
+            Name of the container to write the parquet to
         id_field: list
             Keys to perform upsert on.
         """
@@ -307,6 +320,7 @@ class DfToParquet:
         self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
+        self.container_name = container_name
         test_unique_column_names(self.df)
 
     def _checks(self):
@@ -384,7 +398,7 @@ class DfToParquet:
 
     def run(self):
         blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
-        container_client = blob_service_client.get_container_client(container="parquet")
+        container_client = blob_service_client.get_container_client(container=self.container_name)
 
         if self.method == "upsert":
             test_uniqueness_columns(self.df, self.id_field)
@@ -394,4 +408,9 @@ class DfToParquet:
             self.upsert(df_existing=df_existing)
 
         text_stream = self.df.to_parquet()
-        container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
+        try:
+            container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
+        except azure.core.exceptions.ResourceNotFoundError:
+            logging.info(f"Container {self.container_name} is created!")
+            container_client.create_container()
+            container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
