@@ -33,7 +33,7 @@ def df_to_azure(
     dtypes=None,
     parquet=False,
     clean_staging=True,
-    container_parquet="parquet",
+    container_name="parquet",
 ):
 
     if parquet:
@@ -43,7 +43,7 @@ def df_to_azure(
             folder=schema,
             method=method,
             id_field=id_field,
-            container_parquet=container_parquet,
+            container_name=container_name,
         ).run()
         return None
     else:
@@ -293,7 +293,7 @@ class DfToParquet:
     """
 
     def __init__(
-        self, df: pd.DataFrame, tablename: str, folder: str, method: str, container_parquet: str, id_field: list = None
+        self, df: pd.DataFrame, tablename: str, folder: str, method: str, container_name: str, id_field: list = None
     ):
         """
 
@@ -307,7 +307,7 @@ class DfToParquet:
             foldername. in df_to_azure this is the 'schema' parameter.
         method: str
             upload method (create or append supported).
-        container_parquet: str
+        container_name: str
             Name of the container to write the parquet to
         id_field: list
             Keys to perform upsert on.
@@ -320,7 +320,7 @@ class DfToParquet:
         self.upload_name = self.set_upload_name(folder)
         self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
-        self.container_parquet = container_parquet
+        self.container_name = container_name
         test_unique_column_names(self.df)
 
     def _checks(self):
@@ -398,7 +398,7 @@ class DfToParquet:
 
     def run(self):
         blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
-        container_client = blob_service_client.get_container_client(container=self.container_parquet)
+        container_client = blob_service_client.get_container_client(container=self.container_name)
 
         if self.method == "upsert":
             test_uniqueness_columns(self.df, self.id_field)
@@ -411,6 +411,6 @@ class DfToParquet:
         try:
             container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)
         except azure.core.exceptions.ResourceNotFoundError:
-            logging.info(f"Container {self.container_parquet} is created!")
+            logging.info(f"Container {self.container_name} is created!")
             container_client.create_container()
             container_client.upload_blob(data=text_stream, name=self.upload_name, overwrite=True)

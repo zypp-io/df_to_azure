@@ -28,7 +28,7 @@ def test_create_not_existing_container():
         tablename="my_test_tablename_create",
         schema="my_test_schema",
         parquet=True,
-        container_parquet=container_name,
+        container_name=container_name,
     )
     client_for_deletion = BLOB_SERVICE_CLIENT.get_container_client(container=container_name)
     assert client_for_deletion.get_container_properties()["name"] == container_name
