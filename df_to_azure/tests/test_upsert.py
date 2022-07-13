@@ -6,6 +6,7 @@ from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
+from df_to_azure.exceptions import UpsertError
 
 from ..tests import data
 
@@ -166,3 +167,72 @@ def test_upsert_spaces_column_name(file_dir="data"):
         result = read_sql_table(table_name="sample_spaces_column_name", con=con, schema="test")
 
     assert_frame_equal(expected, result)
+
+
+@pytest.mark.parametrize("clean_staging", [True, False])
+def test_upsert_same_tablename(clean_staging):
+    """
+    Test upsert with the same table name but different columns. Work with clean_staging=True and fails when staging
+    is not cleaned.
+    """
+    df1 = data["sample_1"]
+    df_to_azure(
+        df=df1,
+        tablename="sample",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
+
+    df2 = data["sample_2"]
+    df_to_azure(
+        df=df2,
+        tablename="sample",
+        schema="test",
+        method="upsert",
+        id_field="col_a",
+        wait_till_finished=True,
+        clean_staging=clean_staging,
+    )
+
+    new_col_names = {"col_a": "test_a", "col_b": "test_b", "col_c": "test_c"}
+    df1 = df1.rename(columns=new_col_names)
+    df2 = df2.rename(columns=new_col_names)
+    df_to_azure(
+        df=df1,
+        tablename="sample",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
+    if clean_staging:
+        df_to_azure(
+            df=df2,
+            tablename="sample",
+            schema="test",
+            method="upsert",
+            id_field="test_a",
+            wait_till_finished=True,
+        )
+        expected = DataFrame(
+            {
+                "test_a": [1, 3, 4, 5, 6],
+                "test_b": ["updated value", "test", "test", "new value", "also new"],
+                "test_c": ["E", "Z", "A", "F", "H"],
+            }
+        )
+
+        with auth_azure() as con:
+            result = read_sql_table(table_name="sample", con=con, schema="test")
+
+        assert_frame_equal(expected, result)
+    else:
+        with pytest.raises(UpsertError):
+            df_to_azure(
+                df=df2,
+                tablename="sample",
+                schema="test",
+                method="upsert",
+                id_field="test_a",
+                wait_till_finished=True,
+            )

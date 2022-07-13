@@ -8,6 +8,7 @@ from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
+from df_to_azure.exceptions import DoubleColumnNamesError
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
@@ -32,6 +33,9 @@ def test_mapping_column_types():
             "Int": [1, 2, 3],
             "Int16": array([1, 2, 3], dtype="int16"),
             "pd_Int64": Series([1, 2, 3], dtype="Int64"),
+            "pd_Int32": Series([1, 2, 3], dtype="Int32"),
+            "pd_Int16": Series([1, 2, 3], dtype="Int16"),
+            "pd_Int8": Series([1, 2, 3], dtype="Int8"),
             "Float": [4.52, 5.28, 6.71],
             "Float32": array([4.52, 5.28, 6.71], dtype="float32"),
             "Date": dr1,
@@ -56,6 +60,9 @@ def test_mapping_column_types():
                 "Int",
                 "Int16",
                 "pd_Int64",
+                "pd_Int32",
+                "pd_Int16",
+                "pd_Int8",
                 "Float",
                 "Float32",
                 "Date",
@@ -68,14 +75,17 @@ def test_mapping_column_types():
                 "int",
                 "int",
                 "int",
+                "int",
+                "int",
+                "int",
                 "numeric",
                 "numeric",
                 "datetime",
                 "numeric",
                 "bit",
             ],
-            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan],
-            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 18, 18, nan, 18, nan],
+            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan],
         }
     )
 
@@ -181,3 +191,15 @@ def test_convert_bigint():
 
     expected = DataFrame({"COLUMN_NAME": ["A", "B"], "DATA_TYPE": ["bigint", "int"]})
     assert_frame_equal(result, expected)
+
+
+def test_double_column_names():
+    df_double_names = DataFrame({"A": [1, 2, 3], "B": [10, 20, 30], "C": ["X", "Y", "Z"]})
+    df_double_names = df_double_names.rename(columns={"C": "A"})
+    with pytest.raises(DoubleColumnNamesError):
+        df_to_azure(
+            df=df_double_names,
+            tablename="double_column_names",
+            schema="test",
+            wait_till_finished=True,
+        )
