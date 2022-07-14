@@ -119,6 +119,10 @@ class DfToAzure(ADF):
         if self.clean_staging & (self.method == "upsert"):
             # If you used clean_staging=False before and the upsert gives errors on unknown columns -> remove table in
             # staging manually
+            if not self.wait_till_finished:
+                # Only remove after pipeline is done
+                logging.info("Wait until pipeline is done before cleaning staging")
+                wait_until_pipeline_is_done(self.adf_client, run_response)
             self.clean_staging_after_upsert()
 
         return self.adf_client, run_response
