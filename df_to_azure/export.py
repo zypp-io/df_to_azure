@@ -330,6 +330,8 @@ class DfToParquet:
     def _checks(self):
         if self.method == "upsert" and not self.id_field:
             raise ValueError("With method is upsert, you need to give one or more id columns in argument id_cols")
+        if self.method == "append":
+            raise ValueError("Currently the append method is not available for parquet")
 
     def set_upload_name(self, folder: str) -> str:
         """
