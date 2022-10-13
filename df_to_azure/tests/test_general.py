@@ -213,12 +213,8 @@ def test_dataframe_with_no_data():
     results = list()
 
     for df in df_list:
-        r = df_to_azure(df, tablename="no_data", schema="test")
+        r = df_to_azure(df, tablename=f"dataset_{df.shape[0]}_records", schema="test")
         results.append(r)
 
     # there should be 2 results from the 2 df_to_azure operations.
     assert len(results) == 2
-
-
-if __name__ == "__main__":
-    test_dataframe_with_no_data()
