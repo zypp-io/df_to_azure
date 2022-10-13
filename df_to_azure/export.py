@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from datetime import datetime
 from io import BytesIO
 from typing import Union
