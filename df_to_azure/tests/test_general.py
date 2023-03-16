@@ -203,3 +203,18 @@ def test_double_column_names():
             schema="test",
             wait_till_finished=True,
         )
+
+
+def test_dataframe_with_no_data():
+
+    # scenario where there are 2 dataframes, first one empty and the second one with data.
+    df_list = [DataFrame(), DataFrame({"A": [1, 2, 3], "B": [10, 20, 30], "C": ["X", "Y", "Z"]})]
+
+    results = list()
+
+    for df in df_list:
+        r = df_to_azure(df, tablename=f"dataset_{df.shape[0]}_records", schema="test")
+        results.append(r)
+
+    # there should be 2 results from the 2 df_to_azure operations.
+    assert len(results) == 2
