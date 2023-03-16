@@ -1,6 +1,7 @@
 from typing import Union
 
 from pandas import DataFrame
+
 from df_to_azure.utils import test_unique_column_names
 
 

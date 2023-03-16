@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from df_to_azure.exceptions import PipelineRunError, DoubleColumnNamesError
+from df_to_azure.exceptions import DoubleColumnNamesError, PipelineRunError
 
 
 def print_item(group):
