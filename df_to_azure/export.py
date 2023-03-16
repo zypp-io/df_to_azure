@@ -10,6 +10,7 @@ from azure.storage.blob import BlobServiceClient
 from numpy import dtype
 from pandas import (
     BooleanDtype,
+    CategoricalDtype,
     DataFrame,
     DatetimeTZDtype,
     Float64Dtype,
@@ -252,7 +253,7 @@ class DfToAzure(ADF):
             dtype("bool"): Boolean(),
             BooleanDtype(): Boolean(),
             DatetimeTZDtype(tz="utc"): DateTime(),
-            dtype("category"): string,
+            CategoricalDtype(): string,
         }
 
         col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}
