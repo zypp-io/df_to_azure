@@ -8,7 +8,18 @@ import azure.core.exceptions
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from numpy import dtype
-from pandas import BooleanDtype, DataFrame, Int8Dtype, Int16Dtype, Int32Dtype, Int64Dtype, StringDtype
+from pandas import (
+    BooleanDtype,
+    CategoricalDtype,
+    DataFrame,
+    DatetimeTZDtype,
+    Float64Dtype,
+    Int8Dtype,
+    Int16Dtype,
+    Int32Dtype,
+    Int64Dtype,
+    StringDtype,
+)
 from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
@@ -234,12 +245,15 @@ class DfToAzure(ADF):
             Int16Dtype(): Integer(),
             Int32Dtype(): Integer(),
             Int64Dtype(): Integer(),
+            Float64Dtype(): numeric,
             dtype("float64"): numeric,
             dtype("float32"): numeric,
             dtype("float16"): numeric,
             dtype("<M8[ns]"): DateTime(),
             dtype("bool"): Boolean(),
             BooleanDtype(): Boolean(),
+            DatetimeTZDtype(tz="utc"): DateTime(),
+            CategoricalDtype(): string,
         }
 
         col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}
