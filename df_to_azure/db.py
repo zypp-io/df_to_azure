@@ -71,14 +71,14 @@ class SqlUpsert:
                 )
 
 
-def auth_azure():
+def auth_azure(driver: str = "ODBC Driver 17 for SQL Server"):
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),
         quote_plus(os.environ.get("SQL_PW")),
         os.environ.get("SQL_SERVER"),
         os.environ.get("SQL_DB"),
-        "ODBC Driver 17 for SQL Server",
+        driver,
     )
     con = create_engine(connection_string).connect()
 

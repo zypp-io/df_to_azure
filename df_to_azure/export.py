@@ -197,7 +197,7 @@ class DfToAzure(ADF):
             blob=f"{self.table_name}/{self.table_name}.csv",
         )
 
-        data = self.df.to_csv(index=False, sep="^", quotechar='"', line_terminator="\n")
+        data = self.df.to_csv(index=False, sep="^", quotechar='"', lineterminator="\n")
         blob_client.upload_blob(data, overwrite=True)
 
     def create_schema(self):
