@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from datetime import datetime
 from io import BytesIO
 from typing import Union
@@ -9,7 +8,18 @@ import azure.core.exceptions
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from numpy import dtype
-from pandas import BooleanDtype, DataFrame, Int8Dtype, Int16Dtype, Int32Dtype, Int64Dtype, StringDtype
+from pandas import (
+    BooleanDtype,
+    CategoricalDtype,
+    DataFrame,
+    DatetimeTZDtype,
+    Float64Dtype,
+    Int8Dtype,
+    Int16Dtype,
+    Int32Dtype,
+    Int64Dtype,
+    StringDtype,
+)
 from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
@@ -97,6 +107,11 @@ class DfToAzure(ADF):
         self.clean_staging = clean_staging
 
     def run(self):
+
+        if self.df.empty:
+            logging.info("Data empty, no new records to upload.")
+            return None, None
+
         if self.create:
 
             # azure components
@@ -133,10 +148,6 @@ class DfToAzure(ADF):
                 WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
-
-        if self.df.empty:
-            logging.info("Data empty, no new records to upload.")
-            sys.exit(1)
 
         if self.method == "create":
             self.create_schema()
@@ -186,7 +197,7 @@ class DfToAzure(ADF):
             blob=f"{self.table_name}/{self.table_name}.csv",
         )
 
-        data = self.df.to_csv(index=False, sep="^", quotechar='"', line_terminator="\n")
+        data = self.df.to_csv(index=False, sep="^", quotechar='"', lineterminator="\n")
         blob_client.upload_blob(data, overwrite=True)
 
     def create_schema(self):
@@ -234,12 +245,15 @@ class DfToAzure(ADF):
             Int16Dtype(): Integer(),
             Int32Dtype(): Integer(),
             Int64Dtype(): Integer(),
+            Float64Dtype(): numeric,
             dtype("float64"): numeric,
             dtype("float32"): numeric,
             dtype("float16"): numeric,
             dtype("<M8[ns]"): DateTime(),
             dtype("bool"): Boolean(),
             BooleanDtype(): Boolean(),
+            DatetimeTZDtype(tz="utc"): DateTime(),
+            CategoricalDtype(): string,
         }
 
         col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}

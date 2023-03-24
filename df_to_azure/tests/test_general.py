@@ -161,14 +161,15 @@ def test_pipeline_name():
 def test_empty_dataframe():
     df = DataFrame()
 
-    with pytest.raises(SystemExit):
-        df_to_azure(
-            df=df,
-            tablename="empty_dataframe",
-            schema="test",
-            method="create",
-            wait_till_finished=True,
-        )
+    adf_client, run_response = df_to_azure(
+        df=df,
+        tablename="empty_dataframe",
+        schema="test",
+        method="create",
+        wait_till_finished=True,
+    )
+    assert adf_client is None
+    assert run_response is None
 
 
 def test_convert_bigint():
