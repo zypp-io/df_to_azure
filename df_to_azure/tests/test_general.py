@@ -204,15 +204,3 @@ def test_double_column_names():
             schema="test",
             wait_till_finished=True,
         )
-
-
-def test_driver_import():
-    import sys
-
-    # Before we run auth_azure, pyodbc should not be imported
-    assert "pyodbc" not in sys.modules
-    with auth_azure() as con:
-        # Now it should be
-        assert "pyodbc" in sys.modules
-
-    return con

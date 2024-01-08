@@ -4,6 +4,7 @@ from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.sql import text
 
 from df_to_azure.exceptions import UpsertError
 
@@ -75,6 +76,7 @@ def auth_azure(driver: str = None):
 
     if driver is None:
         import pyodbc
+
         try:
             driver = pyodbc.drivers()[-1]
         except IndexError:
@@ -105,6 +107,5 @@ def execute_stmt(stmt: str):
 
     """
     with auth_azure() as con:
-        t = con.begin()
-        con.execute(stmt)
-        t.commit()
+        with con.begin():
+            con.execute(text(stmt))
