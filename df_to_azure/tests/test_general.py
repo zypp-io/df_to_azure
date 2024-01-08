@@ -41,6 +41,7 @@ def test_mapping_column_types():
             "Date": dr1,
             "Timedelta": dr1 - dr2,
             "Bool": [True, False, True],
+            "Categorical": Series(["a", "b", "c"], dtype="category"),
         }
     )
     df_to_azure(
@@ -68,6 +69,7 @@ def test_mapping_column_types():
                 "Date",
                 "Timedelta",
                 "Bool",
+                "Categorical",
             ],
             "DATA_TYPE": [
                 "varchar",
@@ -83,9 +85,10 @@ def test_mapping_column_types():
                 "datetime",
                 "numeric",
                 "bit",
+                "varchar",
             ],
-            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan],
-            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan],
+            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 255],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan, nan],
         }
     )
 
