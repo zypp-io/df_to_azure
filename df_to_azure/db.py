@@ -71,7 +71,14 @@ class SqlUpsert:
                 )
 
 
-def auth_azure(driver: str = "ODBC Driver 17 for SQL Server"):
+def auth_azure(driver: str = None):
+
+    if driver is None:
+        import pyodbc
+        try:
+            driver = pyodbc.drivers()[-1]
+        except IndexError:
+            raise ValueError("ODBC driver not found")
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),

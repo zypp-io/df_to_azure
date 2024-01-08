@@ -204,3 +204,11 @@ def test_double_column_names():
             schema="test",
             wait_till_finished=True,
         )
+
+
+def test_driver_import():
+    import sys
+    with auth_azure() as con:
+        assert "pyodbc" in sys.modules
+
+    with py
