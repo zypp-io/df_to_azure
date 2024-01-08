@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql import text
 
-from df_to_azure.exceptions import UpsertError
+from df_to_azure.exceptions import DriverError, UpsertError
 
 
 class SqlUpsert:
@@ -80,7 +80,7 @@ def auth_azure(driver: str = None):
         try:
             driver = pyodbc.drivers()[-1]
         except IndexError:
-            raise ValueError("ODBC driver not found")
+            raise DriverError("ODBC driver not found")
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),
