@@ -7,19 +7,8 @@ from typing import Union
 import azure.core.exceptions
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
-from numpy import dtype
-from pandas import (
-    BooleanDtype,
-    CategoricalDtype,
-    DataFrame,
-    DatetimeTZDtype,
-    Float64Dtype,
-    Int8Dtype,
-    Int16Dtype,
-    Int32Dtype,
-    Int64Dtype,
-    StringDtype,
-)
+from pandas import CategoricalDtype, DataFrame
+from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype, is_integer_dtype, is_string_dtype
 from sqlalchemy.sql.visitors import VisitableType
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
 
@@ -234,29 +223,26 @@ class DfToAzure(ADF):
         """
         string = String(length=self.text_length)
         numeric = Numeric(precision=18, scale=self.decimal_precision)
-        type_conversion = {
-            dtype("O"): string,
-            StringDtype(): string,
-            dtype("int64"): Integer(),
-            dtype("int32"): Integer(),
-            dtype("int16"): Integer(),
-            dtype("int8"): Integer(),
-            Int8Dtype(): Integer(),
-            Int16Dtype(): Integer(),
-            Int32Dtype(): Integer(),
-            Int64Dtype(): Integer(),
-            Float64Dtype(): numeric,
-            dtype("float64"): numeric,
-            dtype("float32"): numeric,
-            dtype("float16"): numeric,
-            dtype("<M8[ns]"): DateTime(),
-            dtype("bool"): Boolean(),
-            BooleanDtype(): Boolean(),
-            DatetimeTZDtype(tz="utc"): DateTime(),
-            CategoricalDtype(): string,
-        }
 
-        col_types = {col_name: type_conversion[col_type] for col_name, col_type in self.df.dtypes.to_dict().items()}
+        def convert_type(col_name, col_type):
+            if is_string_dtype(col_type):
+                return string
+            if is_bool_dtype(col_type):
+                return Boolean()
+            if is_integer_dtype(col_type):
+                return Integer()
+            if is_float_dtype(col_type):
+                return numeric
+            if is_datetime64_any_dtype(col_type):
+                return DateTime()
+            if isinstance(col_type, CategoricalDtype):
+                return string
+            else:
+                raise ValueError(f"Column {col_name} has unknown dtype: {col_type}")
+
+        col_types = {
+            col_name: convert_type(col_name, col_type) for col_name, col_type in self.df.dtypes.to_dict().items()
+        }
 
         return col_types
 
