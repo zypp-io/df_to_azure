@@ -227,15 +227,15 @@ class DfToAzure(ADF):
         def convert_type(col_name, col_type):
             if is_string_dtype(col_type):
                 return string
-            if is_bool_dtype(col_type):
+            elif is_bool_dtype(col_type):
                 return Boolean()
-            if is_integer_dtype(col_type):
+            elif is_integer_dtype(col_type):
                 return Integer()
-            if is_float_dtype(col_type):
+            elif is_float_dtype(col_type):
                 return numeric
-            if is_datetime64_any_dtype(col_type):
+            elif is_datetime64_any_dtype(col_type):
                 return DateTime()
-            if isinstance(col_type, CategoricalDtype):
+            elif isinstance(col_type, CategoricalDtype):
                 return string
             else:
                 raise ValueError(f"Column {col_name} has unknown dtype: {col_type}")
