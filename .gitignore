@@ -144,3 +144,6 @@ settings.yml
 
 # mac
 .DS_Store
+
+#VSCode
+.vscode/
