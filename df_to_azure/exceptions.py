@@ -34,3 +34,9 @@ class UpsertError(Exception):
     """For the moment upsert gives an error"""
 
     pass
+
+
+class DriverError(Exception):
+    """Can't find correct odbc driver"""
+
+    pass

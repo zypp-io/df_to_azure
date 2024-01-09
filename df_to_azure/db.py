@@ -4,8 +4,9 @@ from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.sql import text
 
-from df_to_azure.exceptions import UpsertError
+from df_to_azure.exceptions import DriverError, UpsertError
 
 
 class SqlUpsert:
@@ -71,7 +72,15 @@ class SqlUpsert:
                 )
 
 
-def auth_azure(driver: str = "ODBC Driver 17 for SQL Server"):
+def auth_azure(driver: str = None):
+
+    if driver is None:
+        import pyodbc
+
+        try:
+            driver = pyodbc.drivers()[-1]
+        except IndexError:
+            raise DriverError("ODBC driver not found")
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),
@@ -98,6 +107,5 @@ def execute_stmt(stmt: str):
 
     """
     with auth_azure() as con:
-        t = con.begin()
-        con.execute(stmt)
-        t.commit()
+        with con.begin():
+            con.execute(text(stmt))
