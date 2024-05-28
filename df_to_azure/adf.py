@@ -192,7 +192,6 @@ class ADF(TableParameters):
         self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
 
     def create_output_sql(self):
-
         ds_name = f"SQL_dftoazure_{self.table_name}"
 
         ds_ls = LinkedServiceReference(reference_name=self.ls_sql_name)
@@ -204,7 +203,6 @@ class ADF(TableParameters):
         self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, data_azure_sql)
 
     def create_pipeline(self, pipeline_name):
-
         activities = [self.create_copy_activity()]
         # If user wants to upsert, we append stored procedure activity to pipeline.
         if self.method == "upsert":

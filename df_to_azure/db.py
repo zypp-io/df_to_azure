@@ -73,7 +73,6 @@ class SqlUpsert:
 
 
 def auth_azure(driver: str = None):
-
     if driver is None:
         import pyodbc
 

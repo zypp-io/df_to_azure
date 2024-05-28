@@ -34,7 +34,6 @@ def df_to_azure(
     clean_staging=True,
     container_name="parquet",
 ):
-
     if parquet:
         DfToParquet(
             df=df,
@@ -96,13 +95,11 @@ class DfToAzure(ADF):
         self.clean_staging = clean_staging
 
     def run(self):
-
         if self.df.empty:
             logging.info("Data empty, no new records to upload.")
             return None, None
 
         if self.create:
-
             # azure components
             self.create_resourcegroup()
             self.create_datafactory()
@@ -137,7 +134,6 @@ class DfToAzure(ADF):
                 WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
-
         if self.method == "create":
             self.create_schema()
             self.push_to_azure()
