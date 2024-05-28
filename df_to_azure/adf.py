@@ -173,7 +173,7 @@ class ADF(TableParameters):
     def create_input_blob(self):
         ds_name = f"BLOB_dftoazure_{self.table_name}"
 
-        ds_ls = LinkedServiceReference(reference_name=self.ls_blob_name)
+        ds_ls = LinkedServiceReference(type="LinkedServiceReference", reference_name=self.ls_blob_name)
         ds_azure_blob = AzureBlobDataset(
             linked_service_name=ds_ls,
             folder_path=f"dftoazure/{self.table_name}",
@@ -194,7 +194,7 @@ class ADF(TableParameters):
     def create_output_sql(self):
         ds_name = f"SQL_dftoazure_{self.table_name}"
 
-        ds_ls = LinkedServiceReference(reference_name=self.ls_sql_name)
+        ds_ls = LinkedServiceReference(type="LinkedServiceReference", reference_name=self.ls_sql_name)
         data_azure_sql = AzureSqlTableDataset(
             linked_service_name=ds_ls,
             table_name=f"{self.schema}.{self.table_name}",
@@ -224,8 +224,8 @@ class ADF(TableParameters):
         blob_source = BlobSource()
         sql_sink = SqlSink()
 
-        ds_in_ref = DatasetReference(reference_name=f"BLOB_dftoazure_{self.table_name}")
-        ds_out_ref = DatasetReference(reference_name=f"SQL_dftoazure_{self.table_name}")
+        ds_in_ref = DatasetReference(type="DatasetReference", reference_name=f"BLOB_dftoazure_{self.table_name}")
+        ds_out_ref = DatasetReference(type="DatasetReference", reference_name=f"SQL_dftoazure_{self.table_name}")
         copy_activity = CopyActivity(
             name=act_name,
             inputs=[ds_in_ref],
@@ -241,7 +241,9 @@ class ADF(TableParameters):
         dependency = ActivityDependency(
             activity=f"Copy {self.table_name} to SQL", dependency_conditions=[dependency_condition]
         )
-        linked_service_reference = LinkedServiceReference(reference_name=self.ls_sql_name)
+        linked_service_reference = LinkedServiceReference(
+            type="LinkedServiceReference", reference_name=self.ls_sql_name
+        )
         activity = SqlServerStoredProcedureActivity(
             stored_procedure_name=f"UPSERT_{self.table_name}",
             name="UPSERT procedure",

@@ -9,8 +9,7 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from pandas import CategoricalDtype, DataFrame
 from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype, is_integer_dtype, is_string_dtype
-from sqlalchemy.sql.visitors import VisitableType
-from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
+from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String, TypeEngine
 
 from df_to_azure.adf import ADF
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
@@ -130,7 +129,7 @@ class DfToAzure(ADF):
 
     def _checks(self):
         if self.dtypes:
-            if not all([type(given_type) == VisitableType for given_type in self.dtypes.keys()]):
+            if not all([type(given_type) == TypeEngine for given_type in self.dtypes.keys()]):
                 WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
