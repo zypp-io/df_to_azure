@@ -183,10 +183,10 @@ class DfToAzure(ADF):
         blob_client = self.blob_service_client()
         blob_client = blob_client.get_blob_client(
             container="dftoazure",
-            blob=f"{self.table_name}/{self.table_name}.csv",
+            blob=f"{self.table_name}/{self.table_name}.parquet",
         )
 
-        data = self.df.to_csv(index=False, sep="^", quotechar='"', lineterminator="\n")
+        data = self.df.to_parquet(index=False)
         blob_client.upload_blob(data, overwrite=True)
 
     def create_schema(self):
