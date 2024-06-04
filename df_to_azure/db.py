@@ -49,11 +49,11 @@ class SqlUpsert:
         """
         logging.debug(query)
 
-        return query
+        return text(query)
 
     def drop_procedure(self):
         query = f"DROP PROCEDURE IF EXISTS [UPSERT_{self.table_name}];"
-        return query
+        return text(query)
 
     def create_stored_procedure(self):
         with auth_azure() as con:
@@ -73,7 +73,6 @@ class SqlUpsert:
 
 
 def auth_azure(driver: str = None):
-
     if driver is None:
         import pyodbc
 
