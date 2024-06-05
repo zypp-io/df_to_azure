@@ -9,8 +9,7 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from pandas import CategoricalDtype, DataFrame
 from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype, is_integer_dtype, is_string_dtype
-from sqlalchemy.sql.visitors import VisitableType
-from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String
+from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String, TypeEngine
 
 from df_to_azure.adf import ADF
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
@@ -34,7 +33,6 @@ def df_to_azure(
     clean_staging=True,
     container_name="parquet",
 ):
-
     if parquet:
         DfToParquet(
             df=df,
@@ -96,13 +94,11 @@ class DfToAzure(ADF):
         self.clean_staging = clean_staging
 
     def run(self):
-
         if self.df.empty:
             logging.info("Data empty, no new records to upload.")
             return None, None
 
         if self.create:
-
             # azure components
             self.create_resourcegroup()
             self.create_datafactory()
@@ -133,11 +129,10 @@ class DfToAzure(ADF):
 
     def _checks(self):
         if self.dtypes:
-            if not all([type(given_type) == VisitableType for given_type in self.dtypes.keys()]):
+            if not all([type(given_type) == TypeEngine for given_type in self.dtypes.keys()]):
                 WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
-
         if self.method == "create":
             self.create_schema()
             self.push_to_azure()
@@ -183,10 +178,18 @@ class DfToAzure(ADF):
         blob_client = self.blob_service_client()
         blob_client = blob_client.get_blob_client(
             container="dftoazure",
-            blob=f"{self.table_name}/{self.table_name}.csv",
+            blob=f"{self.table_name}/{self.table_name}.parquet",
         )
 
-        data = self.df.to_csv(index=False, sep="^", quotechar='"', lineterminator="\n")
+        # This is needed because ADF converts datetime to Unix Epoch
+        #   resulting in INT64 type,
+        #   which conflicts with our Datetime column in the database
+        #   https://shorturl.at/dtSm6
+        datetime_dtypes = self.df.select_dtypes("datetime")
+        if datetime_dtypes.empty is False:
+            for col in datetime_dtypes.columns:
+                self.df[col] = self.df[col].astype(str)
+        data = self.df.to_parquet(index=False)
         blob_client.upload_blob(data, overwrite=True)
 
     def create_schema(self):

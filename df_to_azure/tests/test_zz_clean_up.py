@@ -1,4 +1,5 @@
 from df_to_azure.db import auth_azure
+from sqlalchemy.sql import text
 
 
 # --- CLEAN UP ----
@@ -36,5 +37,5 @@ def test_clean_up_db():
         with con.begin():
             for schema, tables in tables_dict.items():
                 for table in tables:
-                    query = f"DROP TABLE IF EXISTS {schema}.{table};"
+                    query = text(f"DROP TABLE IF EXISTS {schema}.{table};")
                     con.execute(query)
