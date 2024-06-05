@@ -178,8 +178,8 @@ class ADF(TableParameters):
         ds_azure_blob = AzureBlobDataset(
             linked_service_name=ds_ls,
             folder_path=f"dftoazure/{self.table_name}",
-            file_name=f"{self.table_name}.parquet",  # Changed to parquet
-            format=ParquetFormat(),  # Changed format to ParquetFormat
+            file_name=f"{self.table_name}.parquet",
+            format=ParquetFormat(),
         )
         ds_azure_blob = DatasetResource(properties=ds_azure_blob)
         self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
