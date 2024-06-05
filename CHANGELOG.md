@@ -59,3 +59,4 @@ Changelog
 
 - Upgrade packages and set minimal versions
 - Fix code to work with upgraded packages
+- Export to parquet on storage instead of csv
