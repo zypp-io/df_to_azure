@@ -19,6 +19,7 @@ from azure.mgmt.datafactory.models import (
     Factory,
     LinkedServiceReference,
     LinkedServiceResource,
+    ParquetFormat,
     PipelineResource,
     SecureString,
     SqlServerStoredProcedureActivity,
@@ -177,16 +178,8 @@ class ADF(TableParameters):
         ds_azure_blob = AzureBlobDataset(
             linked_service_name=ds_ls,
             folder_path=f"dftoazure/{self.table_name}",
-            file_name=f"{self.table_name}.csv",
-            format={
-                "type": "TextFormat",
-                "columnDelimiter": "^",
-                "rowDelimiter": "\n",
-                "treatEmptyAsNull": "true",
-                "skipLineCount": 0,
-                "firstRowAsHeader": "true",
-                "quoteChar": '"',
-            },
+            file_name=f"{self.table_name}.parquet",
+            format=ParquetFormat(),
         )
         ds_azure_blob = DatasetResource(properties=ds_azure_blob)
         self.adf_client.datasets.create_or_update(self.rg_name, self.df_name, ds_name, ds_azure_blob)
