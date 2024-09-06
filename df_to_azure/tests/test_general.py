@@ -3,7 +3,7 @@ import logging
 import pytest
 from keyvault import secrets_to_environment
 from numpy import array, nan
-from pandas import DataFrame, Series, date_range, read_sql_query, read_sql_table
+from pandas import DataFrame, Series, date_range, read_sql_query, read_sql_table, NaT
 from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
@@ -44,6 +44,8 @@ def test_mapping_column_types():
             "Categorical": Series(["a", "b", "c"], dtype="category"),
         }
     )
+    df["Date_with_nat"] = df["Date"]
+    df["Date_with_nat"].iloc[2] = NaT
     df_to_azure(
         df,
         tablename="test_df_to_azure",
@@ -67,6 +69,7 @@ def test_mapping_column_types():
                 "Float",
                 "Float32",
                 "Date",
+                "Date",
                 "Timedelta",
                 "Bool",
                 "Categorical",
@@ -82,6 +85,7 @@ def test_mapping_column_types():
                 "int",
                 "numeric",
                 "numeric",
+                "datetime",
                 "datetime",
                 "numeric",
                 "bit",
