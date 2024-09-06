@@ -188,7 +188,7 @@ class DfToAzure(ADF):
         datetime_dtypes = self.df.select_dtypes("datetime")
         if datetime_dtypes.empty is False:
             for col in datetime_dtypes.columns:
-                self.df[col] = self.df[col].astype(str)
+                self.df[col] = self.df[col].astype(str).replace("NaT", None)
         data = self.df.to_parquet(index=False)
         blob_client.upload_blob(data, overwrite=True)
 
