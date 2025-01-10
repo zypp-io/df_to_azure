@@ -72,16 +72,22 @@ class SqlUpsert:
                 )
 
 
+def get_sql_driver() -> str:
+    import pyodbc
+
+    # sql_drivers = [driver for driver in pyodbc.drivers() if re.match(r"ODBC Driver \d+ for SQL Server", driver)]
+    sql_drivers = pyodbc.drivers()
+    try:
+        sql_driver = sql_drivers[-1]
+    except IndexError:
+        raise DriverError("ODBC driver not found")
+
+    return sql_driver
+
+
 def auth_azure(driver: str = None):
     if driver is None:
-        import pyodbc
-        import re
-
-        sql_drivers = [driver for driver in pyodbc.drivers() if re.match(r"ODBC Driver \d+ for SQL Server", driver)]
-        try:
-            driver = sql_drivers[-1]
-        except IndexError:
-            raise DriverError("ODBC driver not found")
+        driver = get_sql_driver()
 
     connection_string = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
         os.environ.get("SQL_USER"),
@@ -107,6 +113,7 @@ def execute_stmt(stmt: str):
     -------
 
     """
+
     with auth_azure() as con:
         with con.begin():
             con.execute(text(stmt))
