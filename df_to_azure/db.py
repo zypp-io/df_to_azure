@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
@@ -75,8 +76,7 @@ class SqlUpsert:
 def get_sql_driver() -> str:
     import pyodbc
 
-    # sql_drivers = [driver for driver in pyodbc.drivers() if re.match(r"ODBC Driver \d+ for SQL Server", driver)]
-    sql_drivers = pyodbc.drivers()
+    sql_drivers = [driver for driver in pyodbc.drivers() if re.match(r"ODBC Driver \d+ for SQL Server", driver)]
     try:
         sql_driver = sql_drivers[-1]
     except IndexError:
