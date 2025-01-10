@@ -10,6 +10,10 @@ from df_to_azure import df_to_azure
 from df_to_azure.db import auth_azure
 from df_to_azure.exceptions import DoubleColumnNamesError
 
+from unittest.mock import patch
+from sqlalchemy.engine import Connection
+
+
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
 
@@ -17,6 +21,19 @@ secrets_to_environment(keyvault_name="df-to-azure")
 # #######################
 # #### GENERAL TESTS ####
 # #######################
+
+
+def test_auth_azure_with_non_sql_server_driver():
+    # Mock pyodbc.drivers to return a list with a non-SQL Server driver
+    with patch(
+        "pyodbc.drivers",
+        return_value=[
+            "ODBC Driver 17 for SQL Server",
+            "MySQL ODBC 8.0 Unicode Driver",
+        ],
+    ):
+        con = auth_azure()
+        assert isinstance(con, Connection)
 
 
 def test_mapping_column_types():
