@@ -2,7 +2,7 @@ import logging
 
 from .export import df_to_azure as df_to_azure
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d [%(levelname)-5s] [%(name)s] - %(message)s",
