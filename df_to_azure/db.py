@@ -75,9 +75,11 @@ class SqlUpsert:
 def auth_azure(driver: str = None):
     if driver is None:
         import pyodbc
+        import re
 
+        sql_drivers = [driver for driver in pyodbc.drivers() if re.match(r"ODBC Driver \d+ for SQL Server", driver)]
         try:
-            driver = pyodbc.drivers()[-1]
+            driver = sql_drivers[-1]
         except IndexError:
             raise DriverError("ODBC driver not found")
 
