@@ -1,14 +1,20 @@
 import logging
 
 import pytest
+import pyodbc
+import re
+
 from keyvault import secrets_to_environment
 from numpy import array, nan
 from pandas import DataFrame, Series, date_range, read_sql_query, read_sql_table, NaT
 from pandas._testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
-from df_to_azure.db import auth_azure
+from df_to_azure.db import auth_azure, get_sql_driver
 from df_to_azure.exceptions import DoubleColumnNamesError
+
+from unittest.mock import patch
+
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 secrets_to_environment(keyvault_name="df-to-azure")
@@ -17,6 +23,19 @@ secrets_to_environment(keyvault_name="df-to-azure")
 # #######################
 # #### GENERAL TESTS ####
 # #######################
+
+
+def test_auth_azure_with_non_sql_server_driver():
+    # Mock pyodbc.drivers to return a list with a non-SQL Server driver
+    drivers = pyodbc.drivers()
+    drivers.extend("MySQL ODBC 8.0 Unicode Driver")
+
+    with patch(
+        "pyodbc.drivers",
+        return_value=drivers,
+    ):
+        sql_driver = get_sql_driver()
+        assert re.match(r"ODBC Driver \d+ for SQL Server", sql_driver)
 
 
 def test_mapping_column_types():
@@ -69,10 +88,10 @@ def test_mapping_column_types():
                 "Float",
                 "Float32",
                 "Date",
-                "Date",
                 "Timedelta",
                 "Bool",
                 "Categorical",
+                "Date_with_nat",
             ],
             "DATA_TYPE": [
                 "varchar",
@@ -86,13 +105,13 @@ def test_mapping_column_types():
                 "numeric",
                 "numeric",
                 "datetime",
-                "datetime",
                 "numeric",
                 "bit",
                 "varchar",
+                "datetime",
             ],
-            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 255],
-            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan, nan],
+            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 255, nan],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan, nan, nan],
         }
     )
 
