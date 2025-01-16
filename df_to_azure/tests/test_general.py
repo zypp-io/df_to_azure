@@ -69,10 +69,10 @@ def test_mapping_column_types():
                 "Float",
                 "Float32",
                 "Date",
-                "Date",
                 "Timedelta",
                 "Bool",
                 "Categorical",
+                "Date_with_nat",
             ],
             "DATA_TYPE": [
                 "varchar",
@@ -86,13 +86,13 @@ def test_mapping_column_types():
                 "numeric",
                 "numeric",
                 "datetime",
-                "datetime",
                 "numeric",
                 "bit",
                 "varchar",
+                "datetime",
             ],
-            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 255],
-            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan, nan],
+            "CHARACTER_MAXIMUM_LENGTH": [255, 255, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 255, nan],
+            "NUMERIC_PRECISION": [nan, nan, 10, 10, 10, 10, 10, 10, 18, 18, nan, 18, nan, nan, nan],
         }
     )
 
