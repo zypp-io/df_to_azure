@@ -32,6 +32,7 @@ def df_to_azure(
     parquet=False,
     clean_staging=True,
     container_name="parquet",
+    preserve_identity=False,
 ):
     if parquet:
         DfToParquet(
@@ -57,6 +58,7 @@ def df_to_azure(
             create=create,
             dtypes=dtypes,
             clean_staging=clean_staging,
+            preserve_identity=preserve_identity,
         ).run()
 
         return adf_client, run_response
@@ -77,6 +79,7 @@ class DfToAzure(ADF):
         create: bool = False,
         dtypes: dict = None,
         clean_staging: bool = True,
+        preserve_identity: bool = False,
     ):
         super().__init__(
             df=df,
@@ -92,6 +95,7 @@ class DfToAzure(ADF):
         self.decimal_precision = decimal_precision
         self.dtypes = dtypes
         self.clean_staging = clean_staging
+        self.preserve_identity = preserve_identity
 
     def run(self):
         if self.df.empty:
@@ -144,6 +148,7 @@ class DfToAzure(ADF):
                 schema=self.schema,
                 id_cols=self.id_field,
                 columns=self.df.columns,
+                preserve_identity=self.preserve_identity,
             )
             upsert.create_stored_procedure()
             self.schema = "staging"
