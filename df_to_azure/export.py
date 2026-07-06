@@ -6,12 +6,12 @@ from typing import Union
 
 import azure.core.exceptions
 import pandas as pd
-from azure.storage.blob import BlobServiceClient
 from pandas import CategoricalDtype, DataFrame
 from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype, is_integer_dtype, is_string_dtype
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String, TypeEngine
 
 from df_to_azure.adf import ADF
+from df_to_azure.auth import create_blob_service_client
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
 from df_to_azure.exceptions import WrongDtypeError
 from df_to_azure.utils import test_unique_column_names, test_uniqueness_columns, wait_until_pipeline_is_done
@@ -129,8 +129,8 @@ class DfToAzure(ADF):
 
     def _checks(self):
         if self.dtypes:
-            if not all([type(given_type) == TypeEngine for given_type in self.dtypes.keys()]):
-                WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
+            if not all(isinstance(given_type, TypeEngine) for given_type in self.dtypes.values()):
+                raise WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
         if self.method == "create":
@@ -325,7 +325,6 @@ class DfToParquet:
         self.method = method
         self.id_field = id_field
         self.upload_name = self.set_upload_name(folder)
-        self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
         self.container_name = container_name
         test_unique_column_names(self.df)
@@ -385,7 +384,7 @@ class DfToParquet:
         diff_cols = self.df.columns.symmetric_difference(df_existing.columns)
         if diff_cols.any():
             err_msg = (
-                f"When performing upsert, column names must be equal. " f"Difference in columns: {', '.join(diff_cols)}"
+                f"When performing upsert, column names must be equal. Difference in columns: {', '.join(diff_cols)}"
             )
             raise ValueError(err_msg)
 
@@ -404,7 +403,7 @@ class DfToParquet:
             self.df = self.df.reset_index()
 
     def run(self):
-        blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
+        blob_service_client = create_blob_service_client(os.environ.get("ls_blob_account_name"))
         container_client = blob_service_client.get_container_client(container=self.container_name)
 
         if self.method == "upsert":

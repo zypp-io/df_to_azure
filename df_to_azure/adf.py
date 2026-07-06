@@ -3,16 +3,19 @@ import os
 from re import sub
 from typing import Union
 
-from azure.identity import ClientSecretCredential
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.datafactory.models import (
     ActivityDependency,
     AzureBlobDataset,
+    AzureBlobStorageLinkedService,
+    AzureSqlDatabaseAuthenticationType,
     AzureSqlDatabaseLinkedService,
     AzureSqlTableDataset,
+    AzureStorageAuthenticationType,
     AzureStorageLinkedService,
     BlobSource,
     CopyActivity,
+    CredentialReference,
     DatasetReference,
     DatasetResource,
     DependencyCondition,
@@ -26,9 +29,18 @@ from azure.mgmt.datafactory.models import (
     SqlSink,
 )
 from azure.mgmt.resource import ResourceManagementClient
-from azure.storage.blob import BlobServiceClient
 from pandas import DataFrame
 
+from df_to_azure.auth import (
+    AUTH_DEFAULT,
+    AUTH_KEY,
+    AUTH_SQL_PASSWORD,
+    AUTH_SYSTEM_ASSIGNED_MANAGED_IDENTITY,
+    AUTH_USER_ASSIGNED_MANAGED_IDENTITY,
+    create_blob_service_client,
+    create_default_credential,
+    get_auth_mode,
+)
 from df_to_azure.exceptions import EnvVariableNotSetError
 from df_to_azure.settings import TableParameters
 from df_to_azure.utils import print_item
@@ -56,7 +68,7 @@ class ADF(TableParameters):
             sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_SERVER")),
             sub("[<>*#.%&:\\\\+?/]", "-", os.environ.get("SQL_DB")),
         )
-        self.ls_blob_name = f'accountname={os.environ.get("ls_blob_account_name")}'
+        self.ls_blob_name = f"accountname={os.environ.get('ls_blob_account_name')}"
         self.create = create
 
     @staticmethod
@@ -68,23 +80,31 @@ class ADF(TableParameters):
         -------
 
         """
-        required_env_vars = [
-            "AZURE_CLIENT_ID",
-            "AZURE_CLIENT_SECRET",
-            "AZURE_TENANT_ID",
+        required_env_vars = {
             "SQL_DB",
-            "SQL_PW",
             "SQL_SERVER",
-            "SQL_USER",
             "df_name",
-            "ls_blob_account_key",
             "ls_blob_account_name",
-            "ls_blob_name",
-            "ls_sql_name",
             "rg_location",
             "rg_name",
             "subscription_id",
-        ]
+        }
+
+        if get_auth_mode("DF_TO_AZURE_STORAGE_AUTH", AUTH_DEFAULT) == AUTH_KEY:
+            required_env_vars.add("ls_blob_account_key")
+
+        sql_password_selected = (
+            get_auth_mode("DF_TO_AZURE_SQL_AUTH", "active_directory_default") == AUTH_SQL_PASSWORD
+            or get_auth_mode("DF_TO_AZURE_ADF_SQL_AUTH", AUTH_SYSTEM_ASSIGNED_MANAGED_IDENTITY) == AUTH_SQL_PASSWORD
+        )
+        if sql_password_selected:
+            required_env_vars.update({"SQL_PW", "SQL_USER"})
+
+        if get_auth_mode("DF_TO_AZURE_ADF_SQL_AUTH", AUTH_SYSTEM_ASSIGNED_MANAGED_IDENTITY) == (
+            AUTH_USER_ASSIGNED_MANAGED_IDENTITY
+        ):
+            required_env_vars.add("DF_TO_AZURE_ADF_CREDENTIAL_NAME")
+
         not_set = [env for env in required_env_vars if os.environ.get(env) is None]
 
         if not_set:
@@ -92,13 +112,7 @@ class ADF(TableParameters):
 
     @staticmethod
     def create_credentials():
-        credentials = ClientSecretCredential(
-            client_id=os.environ.get("AZURE_CLIENT_ID"),
-            client_secret=os.environ.get("AZURE_CLIENT_SECRET"),
-            tenant_id=os.environ.get("AZURE_TENANT_ID"),
-        )
-
-        return credentials
+        return create_default_credential()
 
     def adf_client(self):
         adf_client = DataFactoryManagementClient(self.credentials, os.environ.get("subscription_id"))
@@ -125,13 +139,7 @@ class ADF(TableParameters):
             logging.info(f"Datafactory {os.environ.get('df_name')} created!")
 
     def blob_service_client(self):
-        connect_str = (
-            f"DefaultEndpointsProtocol=https;AccountName={self.ls_blob_account_name}"
-            f";AccountKey={os.environ.get('ls_blob_account_key')}"
-        )
-        blob_service_client = BlobServiceClient.from_connection_string(connect_str, timeout=600)
-
-        return blob_service_client
+        return create_blob_service_client(self.ls_blob_account_name, credential=self.credentials, timeout=600)
 
     def create_blob_container(self):
         try:
@@ -140,15 +148,43 @@ class ADF(TableParameters):
             logging.info(e)
 
     def create_linked_service_sql(self):
-        conn_string = SecureString(
-            value=f"integrated security=False;encrypt=True;connection timeout=600;data "
-            f"source={os.environ.get('SQL_SERVER')}"
-            f";initial catalog={os.environ.get('SQL_DB')}"
-            f";user id={os.environ.get('SQL_USER')}"
-            f";password={os.environ.get('SQL_PW')}"
-        )
+        sql_auth = get_auth_mode("DF_TO_AZURE_ADF_SQL_AUTH", AUTH_SYSTEM_ASSIGNED_MANAGED_IDENTITY)
+        if sql_auth == AUTH_SQL_PASSWORD:
+            conn_string = SecureString(
+                value=f"integrated security=False;encrypt=True;connection timeout=600;data "
+                f"source={os.environ.get('SQL_SERVER')}"
+                f";initial catalog={os.environ.get('SQL_DB')}"
+                f";user id={os.environ.get('SQL_USER')}"
+                f";password={os.environ.get('SQL_PW')}"
+            )
+            linked_service = AzureSqlDatabaseLinkedService(connection_string=conn_string)
+        elif sql_auth == AUTH_SYSTEM_ASSIGNED_MANAGED_IDENTITY:
+            linked_service = AzureSqlDatabaseLinkedService(
+                server=os.environ.get("SQL_SERVER"),
+                database=os.environ.get("SQL_DB"),
+                encrypt="mandatory",
+                trust_server_certificate=False,
+                authentication_type=AzureSqlDatabaseAuthenticationType.SYSTEM_ASSIGNED_MANAGED_IDENTITY,
+            )
+        elif sql_auth == AUTH_USER_ASSIGNED_MANAGED_IDENTITY:
+            linked_service = AzureSqlDatabaseLinkedService(
+                server=os.environ.get("SQL_SERVER"),
+                database=os.environ.get("SQL_DB"),
+                encrypt="mandatory",
+                trust_server_certificate=False,
+                authentication_type=AzureSqlDatabaseAuthenticationType.USER_ASSIGNED_MANAGED_IDENTITY,
+                credential=CredentialReference(
+                    type="CredentialReference",
+                    reference_name=os.environ.get("DF_TO_AZURE_ADF_CREDENTIAL_NAME"),
+                ),
+            )
+        else:
+            raise ValueError(
+                "DF_TO_AZURE_ADF_SQL_AUTH must be 'system_assigned_managed_identity', "
+                "'user_assigned_managed_identity', or 'sql_password'."
+            )
 
-        ls_azure_sql = LinkedServiceResource(properties=AzureSqlDatabaseLinkedService(connection_string=conn_string))
+        ls_azure_sql = LinkedServiceResource(properties=linked_service)
 
         self.adf_client.linked_services.create_or_update(
             self.rg_name,
@@ -158,12 +194,23 @@ class ADF(TableParameters):
         )
 
     def create_linked_service_blob(self):
-        storage_string = SecureString(
-            value=f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
-            f";AccountKey={os.environ.get('ls_blob_account_key')}"
-        )
+        storage_auth = get_auth_mode("DF_TO_AZURE_STORAGE_AUTH", AUTH_DEFAULT)
+        if storage_auth == AUTH_KEY:
+            storage_string = SecureString(
+                value=f"DefaultEndpointsProtocol=https;AccountName={os.environ.get('ls_blob_account_name')}"
+                f";AccountKey={os.environ.get('ls_blob_account_key')}"
+            )
+            linked_service = AzureStorageLinkedService(connection_string=storage_string)
+        elif storage_auth == AUTH_DEFAULT:
+            linked_service = AzureBlobStorageLinkedService(
+                service_endpoint=f"https://{os.environ.get('ls_blob_account_name')}.blob.core.windows.net/",
+                account_kind=os.environ.get("DF_TO_AZURE_STORAGE_ACCOUNT_KIND", "StorageV2"),
+                authentication_type=AzureStorageAuthenticationType.MSI,
+            )
+        else:
+            raise ValueError("DF_TO_AZURE_STORAGE_AUTH must be 'default' or 'key'.")
 
-        ls_azure_blob = LinkedServiceResource(properties=AzureStorageLinkedService(connection_string=storage_string))
+        ls_azure_blob = LinkedServiceResource(properties=linked_service)
         self.adf_client.linked_services.create_or_update(
             self.rg_name,
             self.df_name,
