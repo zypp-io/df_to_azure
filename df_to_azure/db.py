@@ -8,7 +8,6 @@ from sqlalchemy.engine import URL
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql import text
 
-from df_to_azure.auth import AUTH_ACTIVE_DIRECTORY_DEFAULT, AUTH_MANAGED_IDENTITY, AUTH_SQL_PASSWORD, get_auth_mode
 from df_to_azure.exceptions import DriverError, UpsertError
 
 
@@ -91,47 +90,45 @@ def auth_azure(driver: str = None):
     if driver is None:
         driver = get_sql_driver()
 
-    sql_auth = get_auth_mode("DF_TO_AZURE_SQL_AUTH", AUTH_ACTIVE_DIRECTORY_DEFAULT)
-    if sql_auth == AUTH_SQL_PASSWORD:
-        connection_url = "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-            os.environ.get("SQL_USER"),
-            quote_plus(os.environ.get("SQL_PW")),
-            os.environ.get("SQL_SERVER"),
-            os.environ.get("SQL_DB"),
-            driver,
-        )
-    else:
-        authentication = {
-            AUTH_ACTIVE_DIRECTORY_DEFAULT: "ActiveDirectoryDefault",
-            AUTH_MANAGED_IDENTITY: "ActiveDirectoryMsi",
-        }.get(sql_auth)
-        if authentication is None:
-            raise ValueError(
-                "DF_TO_AZURE_SQL_AUTH must be 'active_directory_default', 'managed_identity', or 'sql_password'."
-            )
+    connection_urls = [create_active_directory_default_url(driver)]
+    if os.environ.get("SQL_USER") and os.environ.get("SQL_PW"):
+        connection_urls.append(create_sql_password_url(driver))
 
-        username = None
-        if sql_auth == AUTH_MANAGED_IDENTITY:
-            username = os.environ.get("DF_TO_AZURE_SQL_MANAGED_IDENTITY_CLIENT_ID")
+    last_error = None
+    for connection_url in connection_urls:
+        try:
+            return create_engine(connection_url).connect()
+        except Exception as error:
+            last_error = error
+            logging.info("Could not connect to Azure SQL with the current authentication option: %s", error)
 
-        connection_url = URL.create(
-            "mssql+pyodbc",
-            username=username,
-            host=os.environ.get("SQL_SERVER"),
-            port=1433,
-            database=os.environ.get("SQL_DB"),
-            query={
-                "driver": driver,
-                "Encrypt": "yes",
-                "TrustServerCertificate": "no",
-                "Connection Timeout": "600",
-                "Authentication": authentication,
-            },
-        )
+    raise last_error
 
-    con = create_engine(connection_url).connect()
 
-    return con
+def create_active_directory_default_url(driver: str):
+    return URL.create(
+        "mssql+pyodbc",
+        host=os.environ.get("SQL_SERVER"),
+        port=1433,
+        database=os.environ.get("SQL_DB"),
+        query={
+            "driver": driver,
+            "Encrypt": "yes",
+            "TrustServerCertificate": "no",
+            "Connection Timeout": "600",
+            "Authentication": "ActiveDirectoryDefault",
+        },
+    )
+
+
+def create_sql_password_url(driver: str):
+    return "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
+        os.environ.get("SQL_USER"),
+        quote_plus(os.environ.get("SQL_PW")),
+        os.environ.get("SQL_SERVER"),
+        os.environ.get("SQL_DB"),
+        driver,
+    )
 
 
 def execute_stmt(stmt: str):

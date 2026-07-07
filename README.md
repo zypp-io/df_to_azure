@@ -53,7 +53,8 @@ The default authentication path is passwordless:
 - Deployed Python workloads can use a managed identity.
 - Data Factory linked services use the Data Factory managed identity by default.
 
-You should not need SQL passwords, storage account keys, or storage connection strings for the default setup.
+You should not need SQL passwords, storage account keys, or storage connection strings for the default setup. When
+legacy values are present, the package uses a fixed fallback order instead of auth-mode environment variables.
 
 ## Parquet
 Since version 0.6.0, functionality for uploading dataframe to parquet is supported. simply add argument `parquet=True` to upload the dataframe to the Azure storage container parquet.
@@ -74,39 +75,23 @@ SQL_SERVER="<server-name>.database.windows.net"
 SQL_DB=""
 ```
 
-Optional authentication settings:
+The authentication order is fixed:
+
+1. Azure management clients use `DefaultAzureCredential`.
+2. Python Blob clients use `ls_blob_account_name` with `DefaultAzureCredential`.
+3. If no storage account name is available, Blob clients fall back to `AZURE_STORAGE_CONNECTION_STRING`.
+4. If no storage connection string is available, Blob clients fall back to `ls_blob_account_name` +
+   `ls_blob_account_key`.
+5. Direct Python SQL connections use ODBC `ActiveDirectoryDefault`.
+6. If direct Python SQL authentication fails and both `SQL_USER` and `SQL_PW` are set, SQL falls back to SQL password
+   authentication.
+7. Azure Data Factory Blob linked services always use managed identity.
+8. Azure Data Factory SQL linked services use the system-assigned managed identity by default.
+
+For a user-assigned managed identity on Data Factory, first create an ADF credential and set its name:
 
 ```text
-# Default: Python Blob clients use DefaultAzureCredential and ADF Blob linked services use managed identity.
-DF_TO_AZURE_STORAGE_AUTH="default"
-
-# Default for direct Python SQL actions such as creating schemas, tables, and upsert procedures.
-# Use active_directory_default for local az login / developer credentials.
-DF_TO_AZURE_SQL_AUTH="active_directory_default"
-
-# Use this in deployed Python workloads when the host itself connects to SQL with managed identity.
-# For a user-assigned managed identity, also set DF_TO_AZURE_SQL_MANAGED_IDENTITY_CLIENT_ID.
-# DF_TO_AZURE_SQL_AUTH="managed_identity"
-# DF_TO_AZURE_SQL_MANAGED_IDENTITY_CLIENT_ID=""
-
-# Default for the Azure Data Factory Azure SQL linked service.
-DF_TO_AZURE_ADF_SQL_AUTH="system_assigned_managed_identity"
-
-# For a user-assigned Data Factory managed identity, first create an ADF credential and set its name here.
-# DF_TO_AZURE_ADF_SQL_AUTH="user_assigned_managed_identity"
-# DF_TO_AZURE_ADF_CREDENTIAL_NAME=""
-```
-
-Legacy secret-based authentication is still available for existing projects, but it is not the recommended setup:
-
-```text
-DF_TO_AZURE_STORAGE_AUTH="key"
-ls_blob_account_key=""
-
-DF_TO_AZURE_SQL_AUTH="sql_password"
-DF_TO_AZURE_ADF_SQL_AUTH="sql_password"
-SQL_USER=""
-SQL_PW=""
+DF_TO_AZURE_ADF_CREDENTIAL_NAME=""
 ```
 
 ## Azure permissions for passwordless auth
@@ -154,9 +139,9 @@ GRANT EXECUTE TO [your-data-factory-name];
 
 Azure SQL must have a Microsoft Entra admin configured before `CREATE USER ... FROM EXTERNAL PROVIDER` works.
 
-For user-assigned managed identity on Data Factory, assign the identity to the factory, create a Data Factory credential for it, set `DF_TO_AZURE_ADF_SQL_AUTH="user_assigned_managed_identity"`, and set `DF_TO_AZURE_ADF_CREDENTIAL_NAME` to that credential name.
+For user-assigned managed identity on Data Factory, assign the identity to the factory, create a Data Factory credential for it, and set `DF_TO_AZURE_ADF_CREDENTIAL_NAME` to that credential name.
 
-Passwordless SQL connections also require a Microsoft ODBC Driver for SQL Server version that supports Microsoft Entra authentication modes such as `ActiveDirectoryDefault` and `ActiveDirectoryMsi`. Use the newest available ODBC Driver 18 where possible.
+Passwordless SQL connections also require a Microsoft ODBC Driver for SQL Server version that supports Microsoft Entra authentication modes such as `ActiveDirectoryDefault`. Use the newest available ODBC Driver 18 where possible.
 
 ## Maintained by [Zypp](https://github.com/zypp-io):
 - [Melvin Folkers](https://github.com/melvinfolkers)
