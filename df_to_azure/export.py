@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import datetime
 from io import BytesIO
 from typing import Union
@@ -403,7 +402,7 @@ class DfToParquet:
             self.df = self.df.reset_index()
 
     def run(self):
-        blob_service_client = create_blob_service_client(os.environ.get("ls_blob_account_name"))
+        blob_service_client = create_blob_service_client()
         container_client = blob_service_client.get_container_client(container=self.container_name)
 
         if self.method == "upsert":

@@ -90,19 +90,14 @@ def auth_azure(driver: str = None):
     if driver is None:
         driver = get_sql_driver()
 
-    connection_urls = [create_active_directory_default_url(driver)]
+    # Explicit SQL credentials win; without them the connection is passwordless.
+    # Same priority as the ADF SQL linked service.
     if os.environ.get("SQL_USER") and os.environ.get("SQL_PW"):
-        connection_urls.append(create_sql_password_url(driver))
+        connection_url = create_sql_password_url(driver)
+    else:
+        connection_url = create_active_directory_default_url(driver)
 
-    last_error = None
-    for connection_url in connection_urls:
-        try:
-            return create_engine(connection_url).connect()
-        except Exception as error:
-            last_error = error
-            logging.info("Could not connect to Azure SQL with the current authentication option: %s", error)
-
-    raise last_error
+    return create_engine(connection_url).connect()
 
 
 def create_active_directory_default_url(driver: str):

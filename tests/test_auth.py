@@ -1,9 +1,11 @@
 from unittest.mock import Mock, patch
 
+import pytest
 from azure.mgmt.datafactory.models import (
     AzureBlobStorageLinkedService,
     AzureSqlDatabaseAuthenticationType,
     AzureSqlDatabaseLinkedService,
+    AzureStorageLinkedService,
     AzureStorageAuthenticationType,
 )
 
@@ -74,12 +76,19 @@ def test_check_env_variables_accepts_passwordless_defaults(monkeypatch):
     ADF.check_env_variables()
 
 
-@patch("df_to_azure.db.create_engine")
-def test_auth_azure_prefers_active_directory_default(create_engine, monkeypatch):
+def test_check_env_variables_accepts_storage_connection_string_without_account_name(monkeypatch):
     clear_auth_env(monkeypatch)
     set_passwordless_env(monkeypatch)
-    monkeypatch.setenv("SQL_USER", "legacy-user")
-    monkeypatch.setenv("SQL_PW", "legacy-password")
+    monkeypatch.delenv("ls_blob_account_name")
+    monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "legacy-storage-connection-string")
+
+    ADF.check_env_variables()
+
+
+@patch("df_to_azure.db.create_engine")
+def test_auth_azure_uses_active_directory_default_without_sql_credentials(create_engine, monkeypatch):
+    clear_auth_env(monkeypatch)
+    set_passwordless_env(monkeypatch)
     create_engine.return_value.connect.return_value = Mock()
 
     auth_azure(driver="ODBC Driver 18 for SQL Server")
@@ -92,53 +101,82 @@ def test_auth_azure_prefers_active_directory_default(create_engine, monkeypatch)
 
 
 @patch("df_to_azure.db.create_engine")
-def test_auth_azure_falls_back_to_sql_password_when_default_auth_fails(create_engine, monkeypatch):
+def test_auth_azure_uses_sql_password_when_sql_credentials_exist(create_engine, monkeypatch):
     clear_auth_env(monkeypatch)
     set_passwordless_env(monkeypatch)
     monkeypatch.setenv("SQL_USER", "legacy-user")
     monkeypatch.setenv("SQL_PW", "legacy-password")
-
-    default_engine = Mock()
-    default_engine.connect.side_effect = RuntimeError("default auth failed")
-    sql_password_engine = Mock()
-    sql_password_engine.connect.return_value = Mock()
-    create_engine.side_effect = [default_engine, sql_password_engine]
+    create_engine.return_value.connect.return_value = Mock()
 
     auth_azure(driver="ODBC Driver 18 for SQL Server")
 
-    default_url = create_engine.call_args_list[0].args[0]
-    fallback_url = create_engine.call_args_list[1].args[0]
-    assert default_url.query["Authentication"] == "ActiveDirectoryDefault"
-    assert str(fallback_url).startswith("mssql+pyodbc://legacy-user:")
+    url = create_engine.call_args.args[0]
+    assert create_engine.call_count == 1
+    assert str(url).startswith("mssql+pyodbc://legacy-user:")
 
 
 @patch("df_to_azure.auth.BlobServiceClient")
-@patch("df_to_azure.auth.create_default_credential")
-def test_create_blob_service_client_prefers_default_credential_when_account_name_exists(
-    create_default_credential, blob_service_client, monkeypatch
-):
+def test_create_blob_service_client_prefers_connection_string(blob_service_client, monkeypatch):
     clear_auth_env(monkeypatch)
     monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "legacy-storage-connection-string")
-    create_default_credential.return_value = Mock()
+    monkeypatch.setenv("ls_blob_account_name", "teststorage")
 
-    create_blob_service_client("teststorage")
+    create_blob_service_client()
+
+    blob_service_client.from_connection_string.assert_called_once_with("legacy-storage-connection-string", timeout=None)
+
+
+@patch("df_to_azure.auth.BlobServiceClient")
+def test_create_blob_service_client_uses_account_key_when_account_key_exists(blob_service_client, monkeypatch):
+    clear_auth_env(monkeypatch)
+    monkeypatch.setenv("ls_blob_account_name", "teststorage")
+    monkeypatch.setenv("ls_blob_account_key", "legacy-account-key")
+
+    create_blob_service_client()
+
+    blob_service_client.from_connection_string.assert_called_once_with(
+        "DefaultEndpointsProtocol=https;AccountName=teststorage;AccountKey=legacy-account-key", timeout=None
+    )
+
+
+@patch("df_to_azure.auth.BlobServiceClient")
+@patch("df_to_azure.auth.DefaultAzureCredential")
+def test_create_blob_service_client_uses_default_credential_when_only_account_name_exists(
+    default_azure_credential, blob_service_client, monkeypatch
+):
+    clear_auth_env(monkeypatch)
+    monkeypatch.setenv("ls_blob_account_name", "teststorage")
+
+    create_blob_service_client()
 
     blob_service_client.assert_called_once_with(
         account_url="https://teststorage.blob.core.windows.net",
-        credential=create_default_credential.return_value,
+        credential=default_azure_credential.return_value,
         timeout=None,
     )
     blob_service_client.from_connection_string.assert_not_called()
 
 
-@patch("df_to_azure.auth.BlobServiceClient")
-def test_create_blob_service_client_falls_back_to_connection_string(blob_service_client, monkeypatch):
+def test_create_blob_service_client_raises_without_storage_settings(monkeypatch):
     clear_auth_env(monkeypatch)
-    monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "legacy-storage-connection-string")
 
-    create_blob_service_client(None)
+    with pytest.raises(ValueError, match="ls_blob_account_name"):
+        create_blob_service_client()
 
-    blob_service_client.from_connection_string.assert_called_once_with("legacy-storage-connection-string", timeout=None)
+
+def test_adf_sql_linked_service_uses_sql_auth_when_sql_credentials_exist(monkeypatch):
+    clear_auth_env(monkeypatch)
+    set_passwordless_env(monkeypatch)
+    monkeypatch.setenv("SQL_USER", "legacy-user")
+    monkeypatch.setenv("SQL_PW", "legacy-password")
+    adf = create_adf_stub()
+
+    adf.create_linked_service_sql()
+
+    linked_service = adf.adf_client.linked_services.linked_service
+    assert isinstance(linked_service.properties, AzureSqlDatabaseLinkedService)
+    assert "user id=legacy-user" in linked_service.properties.connection_string.value
+    assert "password=legacy-password" in linked_service.properties.connection_string.value
 
 
 def test_adf_sql_linked_service_uses_system_assigned_managed_identity_by_default(monkeypatch):
@@ -172,7 +210,33 @@ def test_adf_sql_linked_service_uses_user_assigned_managed_identity_when_credent
     assert linked_service.properties.credential.reference_name == "user-assigned-mi-credential"
 
 
-def test_adf_blob_linked_service_uses_managed_identity(monkeypatch):
+def test_adf_blob_linked_service_uses_account_key_when_account_key_exists(monkeypatch):
+    clear_auth_env(monkeypatch)
+    set_passwordless_env(monkeypatch)
+    monkeypatch.setenv("ls_blob_account_key", "legacy-account-key")
+    adf = create_adf_stub()
+
+    adf.create_linked_service_blob()
+
+    linked_service = adf.adf_client.linked_services.linked_service
+    assert isinstance(linked_service.properties, AzureStorageLinkedService)
+    assert "AccountKey=legacy-account-key" in linked_service.properties.connection_string.value
+
+
+def test_adf_blob_linked_service_uses_connection_string_when_connection_string_exists(monkeypatch):
+    clear_auth_env(monkeypatch)
+    set_passwordless_env(monkeypatch)
+    monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "legacy-storage-connection-string")
+    adf = create_adf_stub()
+
+    adf.create_linked_service_blob()
+
+    linked_service = adf.adf_client.linked_services.linked_service
+    assert isinstance(linked_service.properties, AzureStorageLinkedService)
+    assert linked_service.properties.connection_string.value == "legacy-storage-connection-string"
+
+
+def test_adf_blob_linked_service_uses_managed_identity_by_default(monkeypatch):
     clear_auth_env(monkeypatch)
     set_passwordless_env(monkeypatch)
     adf = create_adf_stub()

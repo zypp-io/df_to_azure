@@ -28,7 +28,7 @@ secrets_to_environment(keyvault_name="df-to-azure")
 def test_auth_azure_with_non_sql_server_driver():
     # Mock pyodbc.drivers to return a list with a non-SQL Server driver
     drivers = pyodbc.drivers()
-    drivers.extend("MySQL ODBC 8.0 Unicode Driver")
+    drivers.append("MySQL ODBC 8.0 Unicode Driver")
 
     with patch(
         "pyodbc.drivers",
@@ -64,7 +64,7 @@ def test_mapping_column_types():
         }
     )
     df["Date_with_nat"] = df["Date"]
-    df["Date_with_nat"].iloc[2] = NaT
+    df.loc[2, "Date_with_nat"] = NaT
     df_to_azure(
         df,
         tablename="test_df_to_azure",

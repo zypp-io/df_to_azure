@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Project Overview
 
@@ -8,16 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-# Rules
-
-- Always use context7 when I need code generation, setup or configuration steps, or
-library/API documentation. This means you should automatically use the Context7 MCP
-tools to resolve library id and get library docs without me having to explicitly ask.
-
 ### Running Tests
 ```bash
 # Run all tests
-pytest df_to_azure
+pytest
 
 # Run a single test
 pytest df_to_azure/tests/test_df_to_azure.py::test_duplicate_keys_upsert
@@ -103,13 +97,16 @@ String length auto-detection:
 ### Environment Variables
 
 Required environment variables (checked in `ADF.check_env_variables()`):
-- `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` - Azure authentication
 - `subscription_id` - Azure subscription ID
 - `rg_name`, `rg_location`, `df_name` - Resource group and Data Factory settings
-- `ls_blob_account_name`, `ls_blob_account_key` - Blob storage settings
-- `SQL_SERVER`, `SQL_DB`, `SQL_USER`, `SQL_PW` - SQL database credentials
+- `SQL_SERVER`, `SQL_DB` - Azure SQL database
+- `ls_blob_account_name` - Blob storage (not required when `AZURE_STORAGE_CONNECTION_STRING` is set)
 
-For parquet-only uploads: `AZURE_STORAGE_CONNECTION_STRING`
+Authentication is passwordless by default (`DefaultAzureCredential` / managed identity). Explicit credentials win
+when set:
+- `SQL_USER`, `SQL_PW` - SQL password authentication
+- `AZURE_STORAGE_CONNECTION_STRING` or `ls_blob_account_key` - storage secrets
+- `DF_TO_AZURE_ADF_CREDENTIAL_NAME` - user-assigned managed identity for the ADF SQL linked service
 
 ### Upsert Logic
 
@@ -134,4 +131,4 @@ Parquet upsert:
 - Linked service names are generated from server/database names with special characters replaced by `-`
 - Datetime columns are converted to strings before parquet upload to avoid ADF conversion issues
 - Maximum pipeline wait time: 3 hours
-- Tests are named with `test_` prefix and located in `df_to_azure/tests/`
+- Tests are named with `test_` prefix; integration tests (need Azure) live in `df_to_azure/tests/`, unit tests in `tests/`

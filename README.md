@@ -67,7 +67,9 @@ rg_name=""
 rg_location="westeurope"
 df_name=""
 
-# Storage account used for temporary SQL upload parquet files and parquet=True uploads
+# Storage account used for temporary SQL upload parquet files and parquet=True uploads.
+# Use this for passwordless storage auth. If you use a storage connection string instead,
+# ls_blob_account_name is not required.
 ls_blob_account_name=""
 
 # Azure SQL Database
@@ -75,18 +77,16 @@ SQL_SERVER="<server-name>.database.windows.net"
 SQL_DB=""
 ```
 
-The authentication order is fixed:
+The authentication rule is the same for direct Python connections and the Data Factory linked services:
+**explicit credentials win, and without them the package is passwordless.** To go passwordless, simply do not set the
+password, key, and connection-string variables.
 
-1. Azure management clients use `DefaultAzureCredential`.
-2. Python Blob clients use `ls_blob_account_name` with `DefaultAzureCredential`.
-3. If no storage account name is available, Blob clients fall back to `AZURE_STORAGE_CONNECTION_STRING`.
-4. If no storage connection string is available, Blob clients fall back to `ls_blob_account_name` +
-   `ls_blob_account_key`.
-5. Direct Python SQL connections use ODBC `ActiveDirectoryDefault`.
-6. If direct Python SQL authentication fails and both `SQL_USER` and `SQL_PW` are set, SQL falls back to SQL password
-   authentication.
-7. Azure Data Factory Blob linked services always use managed identity.
-8. Azure Data Factory SQL linked services use the system-assigned managed identity by default.
+- Storage: `AZURE_STORAGE_CONNECTION_STRING` → `ls_blob_account_name` + `ls_blob_account_key` →
+  `ls_blob_account_name` with `DefaultAzureCredential` (Python) / managed identity (ADF).
+- SQL: `SQL_USER` + `SQL_PW` → passwordless: ODBC `ActiveDirectoryDefault` (Python) / managed identity (ADF).
+  The ADF SQL linked service uses the user-assigned managed identity referenced by `DF_TO_AZURE_ADF_CREDENTIAL_NAME`
+  when set, otherwise the system-assigned managed identity.
+- Azure management clients always use `DefaultAzureCredential`.
 
 For a user-assigned managed identity on Data Factory, first create an ADF credential and set its name:
 
@@ -142,6 +142,13 @@ Azure SQL must have a Microsoft Entra admin configured before `CREATE USER ... F
 For user-assigned managed identity on Data Factory, assign the identity to the factory, create a Data Factory credential for it, and set `DF_TO_AZURE_ADF_CREDENTIAL_NAME` to that credential name.
 
 Passwordless SQL connections also require a Microsoft ODBC Driver for SQL Server version that supports Microsoft Entra authentication modes such as `ActiveDirectoryDefault`. Use the newest available ODBC Driver 18 where possible.
+
+### Cross-tenant databases
+
+A Data Factory in a different subscription is fine with managed identity when it is still in the same tenant as the
+Azure SQL server. When the Data Factory and Azure SQL server are in different tenants, managed identity may not be a
+valid SQL principal in the target tenant. In that case, set `SQL_USER` and `SQL_PW`; the package will use those
+credentials for both direct Python SQL setup and the ADF SQL linked service. No extra auth-mode variables are required.
 
 ## Maintained by [Zypp](https://github.com/zypp-io):
 - [Melvin Folkers](https://github.com/melvinfolkers)
