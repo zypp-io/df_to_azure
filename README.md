@@ -88,7 +88,9 @@ password, key, and connection-string variables.
   when set, otherwise the system-assigned managed identity.
 - Azure management clients always use `DefaultAzureCredential`.
 
-For a user-assigned managed identity on Data Factory, first create an ADF credential and set its name:
+For a user-assigned managed identity on Data Factory, first create a credential in the Data Factory itself
+(Manage → Credentials) that references the identity, then set the *name of that credential* — not the identity's
+client ID or resource ID:
 
 ```text
 DF_TO_AZURE_ADF_CREDENTIAL_NAME=""
