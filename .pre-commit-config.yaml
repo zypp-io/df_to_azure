@@ -11,7 +11,6 @@ repos:
     -   id: detect-private-key
     -   id: name-tests-test
         args: [--pytest-test-first]
-    -   id: requirements-txt-fixer
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.10
     hooks:
@@ -27,11 +26,3 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: []
--   repo: local
-    hooks:
-    -   id: check-requirements
-        name: Check requirements
-        description: Check if requirements in setup.cfg and requirements.txt are equal
-        language: python
-        entry: python scripts/check_setupcfg_and_requirements_equal.py
-        pass_filenames: false

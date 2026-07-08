@@ -142,6 +142,9 @@ notebooks/
 # local settings
 settings.yml
 
+# uv
+uv.lock
+
 # mac
 .DS_Store
 
