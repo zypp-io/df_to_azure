@@ -10,11 +10,12 @@ This file provides guidance to coding agents when working with code in this repo
 
 ### Running Tests
 ```bash
-# Run all tests
-pytest
+# Unit tests, no Azure needed
+pytest df_to_azure/tests/test_auth.py
 
-# Run a single test
-pytest df_to_azure/tests/test_df_to_azure.py::test_duplicate_keys_upsert
+# Full suite: integration tests that need real Azure resources,
+# see the Testing section in README.md for the required environment variables
+pytest df_to_azure
 ```
 
 ### Linting and Code Quality
@@ -131,4 +132,4 @@ Parquet upsert:
 - Linked service names are generated from server/database names with special characters replaced by `-`
 - Datetime columns are converted to strings before parquet upload to avoid ADF conversion issues
 - Maximum pipeline wait time: 3 hours
-- Tests are named with `test_` prefix; integration tests (need Azure) live in `df_to_azure/tests/`, unit tests in `tests/`
+- All tests live in `df_to_azure/tests/`; `test_auth.py` is unit-level, the rest are integration tests that need real Azure resources

@@ -40,7 +40,7 @@ dependencies = [
 packages = ["df_to_azure"]
 
 [dependency-groups]
-dev = ["keyvault", "pre-commit", "pytest"]
+dev = ["pre-commit", "pytest"]
 
 [tool.pytest.ini_options]
 log_cli = false

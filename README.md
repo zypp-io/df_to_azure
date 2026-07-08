@@ -163,13 +163,30 @@ For support on using this module, you can reach us at [hello@zypp.io](mailto:hel
 
 ## Testing
 
-To run the test suite, use:
+The auth tests are unit tests and run without any Azure resources or environment variables:
+
+```commandline
+pytest df_to_azure/tests/test_auth.py
+```
+
+The rest of the test suite are integration tests: they create real pipelines, blob containers, and SQL tables in
+Azure. To run them, point the environment variables from the [Settings](#settings) section at an Azure environment
+you own:
+
+```text
+subscription_id=""
+rg_name=""
+rg_location="westeurope"
+df_name=""
+ls_blob_account_name=""
+SQL_SERVER="<server-name>.database.windows.net"
+SQL_DB=""
+```
+
+Authenticate (for example with `az login`, see the permissions section above), then run:
 
 ```commandline
 pytest df_to_azure
 ```
 
-To run pytest for a single test:
-```commandline
-pytest df_to_azure/tests/test_df_to_azure.py::test_duplicate_keys_upsert
-```
+Tip: put the variables in a local `.env` file (git-ignored) and run `uv run --env-file .env pytest df_to_azure`.

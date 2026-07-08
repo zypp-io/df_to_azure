@@ -4,7 +4,6 @@ import pytest
 import pyodbc
 import re
 
-from keyvault import secrets_to_environment
 from numpy import array, nan
 from pandas import DataFrame, Series, date_range, read_sql_query, read_sql_table, NaT
 from pandas._testing import assert_frame_equal
@@ -17,7 +16,6 @@ from unittest.mock import patch
 
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
-secrets_to_environment(keyvault_name="df-to-azure")
 
 
 # #######################
