@@ -1,18 +1,36 @@
-import os
 from io import BytesIO
 from time import sleep
 
 import numpy as np
 import pytest
-from azure.storage.blob import BlobServiceClient
 from pandas import DataFrame, concat, read_parquet
 from pandas.testing import assert_frame_equal
 
 from df_to_azure import df_to_azure
+from df_to_azure.auth import create_blob_service_client
+from df_to_azure.env import get_env
 from df_to_azure.tests import data
 
-BLOB_SERVICE_CLIENT = BlobServiceClient.from_connection_string(os.environ.get("AZURE_STORAGE_CONNECTION_STRING"))
-CONTAINER_CLIENT = BLOB_SERVICE_CLIENT.get_container_client(container="parquet")
+
+@pytest.fixture(autouse=True)
+def require_blob_auth_settings():
+    if not get_env("AZURE_STORAGE_CONNECTION_STRING") and not get_env("ls_blob_account_name"):
+        pytest.skip(
+            "Set ls_blob_account_name for passwordless storage auth, or provide AZURE_STORAGE_CONNECTION_STRING."
+        )
+
+
+@pytest.fixture
+def blob_service_client():
+    try:
+        return create_blob_service_client()
+    except ValueError as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.fixture
+def container_client(blob_service_client):
+    return blob_service_client.get_container_client(container="parquet")
 
 
 def test_create_parquet():
@@ -20,7 +38,7 @@ def test_create_parquet():
     df_to_azure(df=df, tablename="my_test_tablename_create", schema="my_test_schema", parquet=True)
 
 
-def test_create_not_existing_container():
+def test_create_not_existing_container(blob_service_client):
     df = data["sample_1"]
     container_name = "non-existing-xyz"
     df_to_azure(
@@ -30,7 +48,7 @@ def test_create_not_existing_container():
         parquet=True,
         container_name=container_name,
     )
-    client_for_deletion = BLOB_SERVICE_CLIENT.get_container_client(container=container_name)
+    client_for_deletion = blob_service_client.get_container_client(container=container_name)
     assert client_for_deletion.get_container_properties()["name"] == container_name
     # After creation delete the container
     client_for_deletion.delete_container()
@@ -44,7 +62,7 @@ def test_append_parquet():
     df_to_azure(df=df, tablename="my_test_tablename_append", schema="my_test_schema", parquet=True, method="append")
 
 
-def test_upsert_parquet_same_shape():
+def test_upsert_parquet_same_shape(container_client):
     df = DataFrame({"id": range(1000, 1050, 10), "value1": range(10, 60, 10), "value2": list("abcde")})
     # upload original df to storage
     df_to_azure(df=df, tablename="upsert_same_shape", schema="test_parquet", parquet=True)
@@ -59,7 +77,7 @@ def test_upsert_parquet_same_shape():
     )
 
     # download the parquet back
-    downloaded_blob = CONTAINER_CLIENT.download_blob("test_parquet/upsert_same_shape.parquet")
+    downloaded_blob = container_client.download_blob("test_parquet/upsert_same_shape.parquet")
     bytes_io = BytesIO(downloaded_blob.readall())
     result = read_parquet(bytes_io)
 
@@ -67,7 +85,7 @@ def test_upsert_parquet_same_shape():
     assert_frame_equal(df, result)
 
 
-def test_upsert_new_rows():
+def test_upsert_new_rows(container_client):
     df1 = DataFrame({"id": [1, 2, 3], "value1": ["A", "B", "C"], "value2": ["D", "E", "F"]})
 
     # create new rows
@@ -83,7 +101,7 @@ def test_upsert_new_rows():
     )
 
     # download the parquet back
-    downloaded_blob = CONTAINER_CLIENT.download_blob("test_parquet/upsert_new_rows.parquet")
+    downloaded_blob = container_client.download_blob("test_parquet/upsert_new_rows.parquet")
     bytes_io = BytesIO(downloaded_blob.readall())
     result = read_parquet(bytes_io)
 
@@ -117,7 +135,7 @@ def test_upsert_difference_columns():
         )
 
 
-def test_upsert_nans():
+def test_upsert_nans(container_client):
     df1 = DataFrame(
         {
             "id": [1, 2, 3],
@@ -149,7 +167,7 @@ def test_upsert_nans():
     df_to_azure(df2, tablename="upsert_nans", schema="test_parquet", method="upsert", parquet=True, id_field=["id"])
 
     # download the parquet back
-    downloaded_blob = CONTAINER_CLIENT.download_blob("test_parquet/upsert_nans.parquet")
+    downloaded_blob = container_client.download_blob("test_parquet/upsert_nans.parquet")
     bytes_io = BytesIO(downloaded_blob.readall())
     result = read_parquet(bytes_io)
 

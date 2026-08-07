@@ -249,19 +249,22 @@ class DfToAzure(ADF):
         return col_types
 
     def get_max_str_len(self):
-        df = self.df.select_dtypes("object")
         default_len = self.text_length
+        string_columns = [
+            col
+            for col, dtype in self.df.dtypes.items()
+            if is_string_dtype(dtype) and not isinstance(dtype, CategoricalDtype)
+        ]
 
         update_dict_len = {}
-        if not df.empty:
-            for col in df.columns:
-                len_col = df[col].astype(str).str.len().max()
-                if default_len < len_col < 8000:
-                    update_dict_len[col] = String(length=int(len_col))
-                elif len_col > 8000:
-                    update_dict_len[col] = String(length=None)
-                else:
-                    update_dict_len[col] = String(length=default_len)
+        for col in string_columns:
+            len_col = self.df[col].astype(str).str.len().max()
+            if default_len < len_col < 8000:
+                update_dict_len[col] = String(length=int(len_col))
+            elif len_col > 8000:
+                update_dict_len[col] = String(length=None)
+            else:
+                update_dict_len[col] = String(length=default_len)
 
         return update_dict_len
 

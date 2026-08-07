@@ -1,14 +1,20 @@
 import logging
-import os
 import re
+import struct
 from urllib.parse import quote_plus
 
-from sqlalchemy import create_engine
+from azure.identity import DefaultAzureCredential
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql import text
 
+from df_to_azure.env import get_env
 from df_to_azure.exceptions import DriverError, UpsertError
+
+SQL_COPT_SS_ACCESS_TOKEN = 1256
+SQL_DATABASE_SCOPE = "https://database.windows.net/.default"
+TRUSTED_CONNECTION_OPTIONS = (";Trusted_Connection=Yes", ";Trusted_Connection=yes")
 
 
 class SqlUpsert:
@@ -92,36 +98,62 @@ def auth_azure(driver: str = None):
 
     # Explicit SQL credentials win; without them the connection is passwordless.
     # Same priority as the ADF SQL linked service.
-    if os.environ.get("SQL_USER") and os.environ.get("SQL_PW"):
+    if get_env("SQL_USER") and get_env("SQL_PW"):
         connection_url = create_sql_password_url(driver)
-    else:
-        connection_url = create_active_directory_default_url(driver)
+        return create_engine(connection_url).connect()
 
-    return create_engine(connection_url).connect()
+    connection_url = create_passwordless_sql_url(driver)
+    engine = create_engine(connection_url)
+    add_access_token_listener(engine)
+    return engine.connect()
 
 
-def create_active_directory_default_url(driver: str):
+def create_passwordless_sql_url(driver: str):
     return URL.create(
         "mssql+pyodbc",
-        host=os.environ.get("SQL_SERVER"),
+        host=get_env("SQL_SERVER"),
         port=1433,
-        database=os.environ.get("SQL_DB"),
+        database=get_env("SQL_DB"),
         query={
             "driver": driver,
             "Encrypt": "yes",
             "TrustServerCertificate": "no",
             "Connection Timeout": "600",
-            "Authentication": "ActiveDirectoryDefault",
         },
     )
 
 
+def add_access_token_listener(engine, credential=None):
+    credential = credential or DefaultAzureCredential()
+
+    @event.listens_for(engine, "do_connect")
+    def provide_access_token(dialect, conn_rec, cargs, cparams):
+        add_access_token_to_connection(cargs, cparams, credential)
+
+
+def add_access_token_to_connection(cargs, cparams, credential):
+    cargs[0] = remove_trusted_connection(cargs[0])
+    cparams.setdefault("attrs_before", {})[SQL_COPT_SS_ACCESS_TOKEN] = create_access_token_struct(credential)
+
+
+def remove_trusted_connection(connection_string: str):
+    for option in TRUSTED_CONNECTION_OPTIONS:
+        connection_string = connection_string.replace(option, "")
+
+    return connection_string
+
+
+def create_access_token_struct(credential=None):
+    token = (credential or DefaultAzureCredential()).get_token(SQL_DATABASE_SCOPE).token.encode("utf-16-le")
+    return struct.pack(f"<I{len(token)}s", len(token), token)
+
+
 def create_sql_password_url(driver: str):
     return "mssql+pyodbc://{}:{}@{}:1433/{}?driver={}".format(
-        os.environ.get("SQL_USER"),
-        quote_plus(os.environ.get("SQL_PW")),
-        os.environ.get("SQL_SERVER"),
-        os.environ.get("SQL_DB"),
+        get_env("SQL_USER"),
+        quote_plus(get_env("SQL_PW")),
+        get_env("SQL_SERVER"),
+        get_env("SQL_DB"),
         driver,
     )
 

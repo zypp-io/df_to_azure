@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import pytest
 import pyodbc
@@ -7,11 +8,11 @@ import re
 from numpy import array, nan
 from pandas import DataFrame, Series, date_range, read_sql_query, read_sql_table, NaT
 from pandas._testing import assert_frame_equal
-
+from sqlalchemy.types import String
 from df_to_azure import df_to_azure
+from df_to_azure.export import DfToAzure
 from df_to_azure.db import auth_azure, get_sql_driver
 from df_to_azure.exceptions import DoubleColumnNamesError
-
 from unittest.mock import patch
 
 
@@ -129,6 +130,29 @@ def test_mapping_column_types():
         result = read_sql_query(query, con=con)
 
     assert_frame_equal(expected, result)
+
+
+def test_get_max_str_len_handles_object_and_string_columns_without_warning():
+    exporter = DfToAzure.__new__(DfToAzure)
+    exporter.df = DataFrame(
+        {
+            "object_text": ["a", "bbbb"],
+            "string_text": Series(["cc", "dddddd"], dtype="string"),
+            "category_text": Series(["x", "yy"], dtype="category"),
+        }
+    )
+    exporter.text_length = 3
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("error")
+        result = exporter.get_max_str_len()
+
+    assert caught == []
+    assert isinstance(result["object_text"], String)
+    assert result["object_text"].length == 4
+    assert isinstance(result["string_text"], String)
+    assert result["string_text"].length == 6
+    assert "category_text" not in result
 
 
 def test_long_string():

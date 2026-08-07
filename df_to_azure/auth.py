@@ -1,7 +1,7 @@
-import os
-
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
+
+from df_to_azure.env import get_env
 
 
 def create_blob_service_client(credential=None, timeout: int = None):
@@ -10,12 +10,12 @@ def create_blob_service_client(credential=None, timeout: int = None):
     explicit secrets win, passwordless (DefaultAzureCredential) is used when only
     ls_blob_account_name is set.
     """
-    connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+    connection_string = get_env("AZURE_STORAGE_CONNECTION_STRING")
     if connection_string:
         return BlobServiceClient.from_connection_string(connection_string, timeout=timeout)
 
-    account_name = os.environ.get("ls_blob_account_name")
-    account_key = os.environ.get("ls_blob_account_key")
+    account_name = get_env("ls_blob_account_name")
+    account_key = get_env("ls_blob_account_key")
     if account_name and account_key:
         connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key}"
         return BlobServiceClient.from_connection_string(connection_string, timeout=timeout)
