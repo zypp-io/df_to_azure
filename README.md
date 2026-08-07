@@ -84,8 +84,8 @@ The authentication rule is the same for direct Python connections and the Data F
 **explicit credentials win, and without them the package is passwordless.** To go passwordless, simply do not set the
 password, key, and connection-string variables.
 
-- Storage: `AZURE_STORAGE_CONNECTION_STRING` → `ls_blob_account_name` + `ls_blob_account_key` →
-  `ls_blob_account_name` with `DefaultAzureCredential` (Python) / managed identity (ADF).
+- Storage: `AZURE_STORAGE_CONNECTION_STRING` → `LS_BLOB_ACCOUNT_NAME` + `LS_BLOB_ACCOUNT_KEY` →
+  `LS_BLOB_ACCOUNT_NAME` with `DefaultAzureCredential` (Python) / managed identity (ADF).
 - SQL: `SQL_USER` + `SQL_PW` → passwordless: `DefaultAzureCredential` access token over ODBC (Python) /
   managed identity (ADF).
   The ADF SQL linked service uses the user-assigned managed identity referenced by `DF_TO_AZURE_ADF_CREDENTIAL_NAME`
@@ -179,11 +179,11 @@ Azure. To run them, point the environment variables from the [Settings](#setting
 you own:
 
 ```text
-subscription_id=""
-rg_name=""
-rg_location="westeurope"
-df_name=""
-ls_blob_account_name=""
+SUBSCRIPTION_ID=""
+RG_NAME=""
+RG_LOCATION="westeurope"
+DF_NAME=""
+LS_BLOB_ACCOUNT_NAME=""
 SQL_SERVER="<server-name>.database.windows.net"
 SQL_DB=""
 ```
