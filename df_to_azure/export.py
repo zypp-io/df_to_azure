@@ -1,17 +1,16 @@
 import logging
-import os
 from datetime import datetime
 from io import BytesIO
 from typing import Union
 
 import azure.core.exceptions
 import pandas as pd
-from azure.storage.blob import BlobServiceClient
 from pandas import CategoricalDtype, DataFrame
 from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype, is_integer_dtype, is_string_dtype
 from sqlalchemy.types import BigInteger, Boolean, DateTime, Integer, Numeric, String, TypeEngine
 
 from df_to_azure.adf import ADF
+from df_to_azure.auth import create_blob_service_client
 from df_to_azure.db import SqlUpsert, auth_azure, execute_stmt
 from df_to_azure.exceptions import WrongDtypeError
 from df_to_azure.utils import test_unique_column_names, test_uniqueness_columns, wait_until_pipeline_is_done
@@ -32,6 +31,7 @@ def df_to_azure(
     parquet=False,
     clean_staging=True,
     container_name="parquet",
+    preserve_identity=False,
 ):
     if parquet:
         DfToParquet(
@@ -57,6 +57,7 @@ def df_to_azure(
             create=create,
             dtypes=dtypes,
             clean_staging=clean_staging,
+            preserve_identity=preserve_identity,
         ).run()
 
         return adf_client, run_response
@@ -77,6 +78,7 @@ class DfToAzure(ADF):
         create: bool = False,
         dtypes: dict = None,
         clean_staging: bool = True,
+        preserve_identity: bool = False,
     ):
         super().__init__(
             df=df,
@@ -92,6 +94,7 @@ class DfToAzure(ADF):
         self.decimal_precision = decimal_precision
         self.dtypes = dtypes
         self.clean_staging = clean_staging
+        self.preserve_identity = preserve_identity
 
     def run(self):
         if self.df.empty:
@@ -129,8 +132,8 @@ class DfToAzure(ADF):
 
     def _checks(self):
         if self.dtypes:
-            if not all([type(given_type) == TypeEngine for given_type in self.dtypes.keys()]):
-                WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
+            if not all(isinstance(given_type, TypeEngine) for given_type in self.dtypes.values()):
+                raise WrongDtypeError("Wrong dtype given, only SqlAlchemy types are accepted")
 
     def upload_dataset(self):
         if self.method == "create":
@@ -144,6 +147,7 @@ class DfToAzure(ADF):
                 schema=self.schema,
                 id_cols=self.id_field,
                 columns=self.df.columns,
+                preserve_identity=self.preserve_identity,
             )
             upsert.create_stored_procedure()
             self.schema = "staging"
@@ -250,19 +254,22 @@ class DfToAzure(ADF):
         return col_types
 
     def get_max_str_len(self):
-        df = self.df.select_dtypes("object")
         default_len = self.text_length
+        string_columns = [
+            col
+            for col, dtype in self.df.dtypes.items()
+            if is_string_dtype(dtype) and not isinstance(dtype, CategoricalDtype)
+        ]
 
         update_dict_len = {}
-        if not df.empty:
-            for col in df.columns:
-                len_col = df[col].astype(str).str.len().max()
-                if default_len < len_col < 8000:
-                    update_dict_len[col] = String(length=int(len_col))
-                elif len_col > 8000:
-                    update_dict_len[col] = String(length=None)
-                else:
-                    update_dict_len[col] = String(length=default_len)
+        for col in string_columns:
+            len_col = self.df[col].astype(str).str.len().max()
+            if default_len < len_col < 8000:
+                update_dict_len[col] = String(length=int(len_col))
+            elif len_col > 8000:
+                update_dict_len[col] = String(length=None)
+            else:
+                update_dict_len[col] = String(length=default_len)
 
         return update_dict_len
 
@@ -325,7 +332,6 @@ class DfToParquet:
         self.method = method
         self.id_field = id_field
         self.upload_name = self.set_upload_name(folder)
-        self.connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self._checks()
         self.container_name = container_name
         test_unique_column_names(self.df)
@@ -385,7 +391,7 @@ class DfToParquet:
         diff_cols = self.df.columns.symmetric_difference(df_existing.columns)
         if diff_cols.any():
             err_msg = (
-                f"When performing upsert, column names must be equal. " f"Difference in columns: {', '.join(diff_cols)}"
+                f"When performing upsert, column names must be equal. Difference in columns: {', '.join(diff_cols)}"
             )
             raise ValueError(err_msg)
 
@@ -404,7 +410,7 @@ class DfToParquet:
             self.df = self.df.reset_index()
 
     def run(self):
-        blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
+        blob_service_client = create_blob_service_client()
         container_client = blob_service_client.get_container_client(container=self.container_name)
 
         if self.method == "upsert":

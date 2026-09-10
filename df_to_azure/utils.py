@@ -1,7 +1,7 @@
 import logging
-import os
 import time
 
+from df_to_azure.env import get_env
 from df_to_azure.exceptions import DoubleColumnNamesError, PipelineRunError
 
 
@@ -71,9 +71,7 @@ def wait_until_pipeline_is_done(adf_client, run_response):
     timeout = time.time() + 60 * 60 * 3
     status = ""
     while status.lower() != "succeeded":
-        pipeline_run = adf_client.pipeline_runs.get(
-            os.environ.get("rg_name"), os.environ.get("df_name"), run_response.run_id
-        )
+        pipeline_run = adf_client.pipeline_runs.get(get_env("rg_name"), get_env("df_name"), run_response.run_id)
         time.sleep(1)
         status = pipeline_run.status
 

@@ -1,3 +1,0 @@
-keyvault
-pre-commit
-pytest

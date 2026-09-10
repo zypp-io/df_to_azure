@@ -1,6 +1,5 @@
-<p align="center">
-  <img alt="logo" src="https://www.zypp.io/static/assets/img/logos/zypp/white/500px.png"  width="200"/>
-</p><br>
+DF to Azure
+===
 
 [![Downloads](https://pepy.tech/badge/df_to_azure)](https://pepy.tech/project/keyvault)
 [![Open Source](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://opensource.org/)
@@ -8,10 +7,9 @@
 [![PyPI](https://img.shields.io/pypi/v/df_to_azure)](https://pypi.org/project/df-to-azure/)
 [![Latest release](https://badgen.net/github/release/zypp-io/df_to_azure)](https://github.com/zypp-io/df_to_azure/releases)
 
-DF to Azure
-===
-
 > Python module for fast upload of pandas DataFrame to Azure SQL Database using automatic created pipelines in Azure Data Factory.
+
+Supported Python versions: 3.11, 3.12, and 3.13.
 
 ## Introduction
 
@@ -48,40 +46,116 @@ If there are new records, the "old" records will be updated in the SQL table.
 The new records will be uploaded and appended to the current SQL table.
 
 # Settings
-To use this module, you need to add the `azure subscriptions settings` and `azure data factory settings` to your environment variables.
-We recommend to work with `.env` files (or even better, automatically load them with [Azure Keyvault](https://pypi.org/project/keyvault/)) and load them in during runtime. But this is optional and they can be set as system variables as well.
-Use the following template when using `.env`
+The default authentication path is passwordless:
+
+- Python Azure SDK clients use `DefaultAzureCredential`.
+- Local development can use `az login`.
+- Deployed Python workloads can use a managed identity.
+- Data Factory linked services use the Data Factory managed identity by default.
+
+You should not need SQL passwords, storage account keys, or storage connection strings for the default setup. When
+legacy values are present, the package uses a fixed fallback order instead of auth-mode environment variables.
 
 ## Parquet
 Since version 0.6.0, functionality for uploading dataframe to parquet is supported. simply add argument `parquet=True` to upload the dataframe to the Azure storage container parquet.
 The arguments tablename and schema will be used to create a folder structure. if parquet is set to True, the dataset will not be uploaded to a SQL database.
 
 ```text
-# --- ADF SETTINGS ---
+# Azure subscription and Data Factory settings
+subscription_id=""
+rg_name=""
+rg_location="westeurope"
+df_name=""
 
-# data factory settings
-rg_name : ""
-rg_location: "westeurope"
-df_name : ""
+# Storage account used for temporary SQL upload parquet files and parquet=True uploads.
+# Use this for passwordless storage auth. If you use a storage connection string instead,
+# ls_blob_account_name is not required.
+ls_blob_account_name=""
 
-# blob settings
-ls_blob_account_name : ""
-ls_blob_container_name : ""
-ls_blob_account_key : ""
-
-# SQL settings
-SQL_SERVER: ""
-SQL_DB: ""
-SQL_USER: ""
-SQL_PW: ""
-
-# --- AZURE SETTINGS ---
-# azure credentials for connecting to azure subscription.
-client_id : ""
-secret : ""
-tenant : ""
-subscription_id : ""
+# Azure SQL Database
+SQL_SERVER="<server-name>.database.windows.net"
+SQL_DB=""
 ```
+
+The lowercase names above are the original names and remain supported. Uppercase aliases are also accepted, for example
+`SUBSCRIPTION_ID`, `RG_NAME`, `RG_LOCATION`, `DF_NAME`, `LS_BLOB_ACCOUNT_NAME`, and `LS_BLOB_ACCOUNT_KEY`.
+
+The authentication rule is the same for direct Python connections and the Data Factory linked services:
+**explicit credentials win, and without them the package is passwordless.** To go passwordless, simply do not set the
+password, key, and connection-string variables.
+
+- Storage: `AZURE_STORAGE_CONNECTION_STRING` → `LS_BLOB_ACCOUNT_NAME` + `LS_BLOB_ACCOUNT_KEY` →
+  `LS_BLOB_ACCOUNT_NAME` with `DefaultAzureCredential` (Python) / managed identity (ADF).
+- SQL: `SQL_USER` + `SQL_PW` → passwordless: `DefaultAzureCredential` access token over ODBC (Python) /
+  managed identity (ADF).
+  The ADF SQL linked service uses the user-assigned managed identity referenced by `DF_TO_AZURE_ADF_CREDENTIAL_NAME`
+  when set, otherwise the system-assigned managed identity.
+- Azure management clients always use `DefaultAzureCredential`.
+
+For a user-assigned managed identity on Data Factory, first create a credential in the Data Factory itself
+(Manage → Credentials) that references the identity, then set the *name of that credential* — not the identity's
+client ID or resource ID:
+
+```text
+DF_TO_AZURE_ADF_CREDENTIAL_NAME=""
+```
+
+## Azure permissions for passwordless auth
+
+There are two identities involved in a normal SQL upload:
+
+1. The identity running Python.
+2. The managed identity of the Azure Data Factory that runs the copy pipeline.
+
+For local development, sign in first:
+
+```commandline
+az login
+```
+
+Grant the local developer identity:
+
+- Azure permissions to create or update Data Factory pipelines, datasets, and linked services. `Data Factory Contributor` on the Data Factory is usually enough when `create=False`; resource group `Contributor` is needed when using `create=True`.
+- `Storage Blob Data Contributor` on the storage account or the relevant containers.
+- A contained Azure SQL user and database permissions for creating schemas, tables, and upsert procedures.
+
+Example SQL permissions for the local developer or deployed Python host identity:
+
+```sql
+CREATE USER [user-or-managed-identity-name] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [user-or-managed-identity-name];
+ALTER ROLE db_datawriter ADD MEMBER [user-or-managed-identity-name];
+ALTER ROLE db_ddladmin ADD MEMBER [user-or-managed-identity-name];
+```
+
+Grant the Data Factory managed identity:
+
+- `Storage Blob Data Reader` on the storage account or the `dftoazure` container so ADF can read the staged parquet file.
+- An Azure SQL contained user with permission to insert into the target and staging tables.
+- `EXECUTE` permission when using `method="upsert"` because ADF runs the generated upsert stored procedure.
+
+Example SQL permissions for the Data Factory system-assigned managed identity:
+
+```sql
+CREATE USER [your-data-factory-name] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [your-data-factory-name];
+ALTER ROLE db_datawriter ADD MEMBER [your-data-factory-name];
+GRANT EXECUTE TO [your-data-factory-name];
+```
+
+Azure SQL must have a Microsoft Entra admin configured before `CREATE USER ... FROM EXTERNAL PROVIDER` works.
+
+For user-assigned managed identity on Data Factory, assign the identity to the factory, create a Data Factory credential for it, and set `DF_TO_AZURE_ADF_CREDENTIAL_NAME` to that credential name.
+
+Passwordless SQL connections require a Microsoft ODBC Driver for SQL Server version that supports access-token
+authentication. Use the newest available ODBC Driver 18 where possible.
+
+### Cross-tenant databases
+
+A Data Factory in a different subscription is fine with managed identity when it is still in the same tenant as the
+Azure SQL server. When the Data Factory and Azure SQL server are in different tenants, managed identity may not be a
+valid SQL principal in the target tenant. In that case, set `SQL_USER` and `SQL_PW`; the package will use those
+credentials for both direct Python SQL setup and the ADF SQL linked service. No extra auth-mode variables are required.
 
 ## Maintained by [Zypp](https://github.com/zypp-io):
 - [Melvin Folkers](https://github.com/melvinfolkers)
@@ -94,13 +168,30 @@ For support on using this module, you can reach us at [hello@zypp.io](mailto:hel
 
 ## Testing
 
-To run the test suite, use:
+The auth tests are unit tests and run without any Azure resources or environment variables:
+
+```commandline
+pytest df_to_azure/tests/test_auth.py
+```
+
+The rest of the test suite are integration tests: they create real pipelines, blob containers, and SQL tables in
+Azure. To run them, point the environment variables from the [Settings](#settings) section at an Azure environment
+you own:
+
+```text
+SUBSCRIPTION_ID=""
+RG_NAME=""
+RG_LOCATION="westeurope"
+DF_NAME=""
+LS_BLOB_ACCOUNT_NAME=""
+SQL_SERVER="<server-name>.database.windows.net"
+SQL_DB=""
+```
+
+Authenticate (for example with `az login`, see the permissions section above), then run:
 
 ```commandline
 pytest df_to_azure
 ```
 
-To run pytest for a single test:
-```commandline
-pytest df_to_azure/tests/test_df_to_azure.py::test_duplicate_keys_upsert
-```
+Tip: put the variables in a local `.env` file (git-ignored) and run `uv run --env-file .env pytest df_to_azure`.
