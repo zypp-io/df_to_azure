@@ -1,11 +1,9 @@
 import logging
 import os
 
-from keyvault import secrets_to_environment
 from pandas import read_csv
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
-secrets_to_environment(keyvault_name="df-to-azure")
 
 """
 This is the testing suite for df_to_azure. In general the following steps will be done per test:
